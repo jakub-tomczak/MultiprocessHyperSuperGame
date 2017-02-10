@@ -30,7 +30,7 @@ int main(int argc, char * argv [])
 		
 
 		int clientsPIDs[maxClients] = {0};
-		int initialMessageId = msgget(initialMessageKey, IPC_CREAT | IPC_EXEC | 0777);
+		int initialMessageId = msgget(initialMessageKey, IPC_CREAT | IPC_EXCL | 0777);
 		if(initialMessageId == -1)
 		{
 			perror("error getting message queue: ");
