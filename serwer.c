@@ -12,6 +12,20 @@
 #include <stdlib.h> //exit
 #include "structures.h"
 
+void displayStats( int initialMessageId)
+{
+	msqid_ds infoStruct;
+	int recived = msgctl(initialMessageId, IPC_STAT, &infoStruct);
+	if(recived == -1)
+	{
+		perror("Error when obtaining queue info: ");
+	} 
+	else
+	{
+		printf("%d, \n", infoStruct.msg_qnum);
+	}
+}
+
 int main(int argc, char * argv [])
 {
 	
@@ -39,6 +53,9 @@ int main(int argc, char * argv [])
 
 		while(true)
 		{
+
+			displayStats(initialMessageId);
+
 			printf("%d -> message id\n", initialMessageId);
 
 			int recivedMessage =  msgrcv(initialMessageId,&message2Rcv, initialMessageSize, 2, 0);
@@ -62,6 +79,7 @@ int main(int argc, char * argv [])
 			if(responseMessage == -1)
 			{
 				perror("Error while responding to the client: ");
+				break;
 			}
 			else
 			{
@@ -80,7 +98,7 @@ int main(int argc, char * argv [])
 				printf("Successfully deleted a queue\n");
 			}
 			
-				return 0;
+			return 0;
 	}
 	else if (forked > 0)
 	{
