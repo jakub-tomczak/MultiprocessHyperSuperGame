@@ -12,15 +12,18 @@
 #include <stdlib.h> //exit
 #include "structures.h"
 
+typedef struct InitialMessage;
+
+
 int main(int argc, char * argv [])
 {
-	
-	
+
+
 	//initialization of messages structures
 	InitialMessage message2Send, message2Rcv;
 	message2Send.mtype = 1;
 	memset(message2Send.mtext, '0',initialMessageSize);
-	
+
 //initialKey used in the message queue that handles new clients
 	int initialMessageKey = 999;
 
@@ -55,7 +58,7 @@ int main(int argc, char * argv [])
 		else
 		{
 			perror("Failed to start messages queue for clients");
-			exit(0);	
+			exit(0);
 		}
 	}
 
@@ -78,7 +81,7 @@ int main(int argc, char * argv [])
 		//parent's process
 		/*
 			if(msgsnd(initialMessageId, &message2Send, initialMessageSize,0) == 0)
-		
+
 	{
 		printf("Sending data successfully\n");
 	}
@@ -87,7 +90,7 @@ int main(int argc, char * argv [])
 		perror("blad z msgctl ");
 	else
 		printf("Msgctl removed msg queue");
-		
+
 	}
 	int a = msgctl(initialMessageId, IPC_RMID ,0);
 	if(a == -1)

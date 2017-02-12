@@ -19,48 +19,40 @@ int main(int argc, char * argv[])
 	message2Snd.mtype = 2;
 	int myPID = getpid();
 
-	
+
 //strcpy(message.mtext, myPidKey);
 	sprintf(message2Snd.mtext, "%d", myPID);
 	message2Snd.mClientsPID = myPID;
-	
-	int initialMessageId = msgget(initialMessageKey, 0);
+
+	int initialMessageId = msgget(INITIAL_MESSAGE_KEY, MESSAGE_QUEUE_RIGHTS);
 	if(initialMessageId == -1)
 	{
-		if(errno == EEXIST)
-		{
-			printf("Queue already exists\n");
-			initialMessageId = msgget(initialMessageKey, 0777);
-		}
-		else
-		{
 			perror("Failed to find the server");
-			exit(0);	
-		}
+			exit(0);
 	}
-	
+
 	printf("Sending data to the server\n");
 	//we can send the message to the server
 	if(msgsnd(initialMessageId, &message2Snd, initialMessageSize, 0) == -1)
 	{
-		perror("Failed to send initial message to the server!");	
-		exit(0);	
+		perror("Failed to send initial message to the server!");
+		exit(0);
 	}
 	else
 	{
 		printf("1.Sent initial message to the server\n");
 	}
 	memset(message2Rcv.mtext, '0', initialMessageSize);
-	
+
 
 	int recivedMessageSize = msgrcv(initialMessageId, &message2Rcv, initialMessageSize, 1,0);
-	
+
 	printf("2.Recived data from a server %s\n", message2Rcv.mtext);
 
 
 	msgctl(initialMessageId, IPC_RMID,0);
-	return 0;	
-	
+	return 0;
+
 
 
 
