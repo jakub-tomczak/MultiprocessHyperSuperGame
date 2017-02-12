@@ -50,7 +50,7 @@ int main(int argc, char * argv[])
 	printf("2.Recived data from a server %s\n", message2Rcv.mtext);
 
 
-	msgctl(initialMessageId, IPC_RMID,0);
+	//msgctl(initialMessageId, IPC_RMID,0);
 	return 0;
 
 
