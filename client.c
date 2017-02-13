@@ -19,7 +19,8 @@ int main(int argc, char * argv[])
 	InitialMessage message2Snd, message2Rcv;
 	message2Snd.mtype = 2;
 	int myPID = getpid();
-
+	
+	printf("client's pid:%d\n",myPID );
 
 //strcpy(message.mtext, myPidKey);
 	sprintf(message2Snd.clientsName, "%d", myPID);
@@ -46,9 +47,9 @@ int main(int argc, char * argv[])
 	memset(message2Rcv.clientsName, '0', INITIAL_MESSAGE_SIZE);
 
 
-	int recivedMessageSize = msgrcv(initialMessageId, &message2Rcv, INITIAL_MESSAGE_SIZE, 1,0);
+	//int recivedMessageSize = msgrcv(initialMessageId, &message2Rcv, INITIAL_MESSAGE_SIZE, 1,0);
 
-	printf("2.Recived data from a server %s\n", message2Rcv.clientsName);
+	//printf("2.Recived data from a server %s\n", message2Rcv.clientsName);
 
 
 	//msgctl(initialMessageId, IPC_RMID,0);

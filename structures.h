@@ -13,13 +13,16 @@
 #define MESSAGE_QUEUE_RIGHTS 0777
 #define CLIENTS_NAME_SIZE 20
 
-#define INITIAL_MESSAGE_TEXT_SIZE 20
-#define INITIAL_MESSAGE_SIZE INITIAL_MESSAGE_TEXT_SIZE+4
+#define INITIAL_MESSAGE_TEXT_SIZE 21
+#define INITIAL_MESSAGE_SIZE INITIAL_MESSAGE_TEXT_SIZE+7
 
 
 //private message constants
 #define PRIVATE_MESSAGE_KEY 0
 #define PRIVATE_MESSAGE_SIZE 10 + 1
+
+
+//ClientInfo structure 
 
 typedef struct InitialMessage
 {
@@ -34,6 +37,15 @@ typedef struct PrivateMessage
 	long mtype;
 	char mtext[PRIVATE_MESSAGE_SIZE + 1];
 } PrivateMessage;
+
+
+
+typedef struct ClientInfo
+{
+	int PID;
+	int lobbyIndex;
+	char nickname[CLIENTS_NAME_SIZE + 1];
+} ClientInfo;
 
 
 void resetInitialMessageStructure(InitialMessage *messageToReset);

@@ -16,7 +16,12 @@
 
 //functions
 void findNewClients();
-void addNewClient();
+void addNewClient(InitialMessage *newClient, ClientInfo *clientPIDSArray, int *clientsArrayIndex);
+int findClientByPID(int clientPID, ClientInfo *clientsArray); //return index of a client with PID in array of clientInfo structures
+
+//globals
+int currentNumberOfClients_GLOBAL = 0;
+
 
 int main(int argc, char * argv [])
 {
@@ -26,11 +31,14 @@ int main(int argc, char * argv [])
     {
         //child's process
         //initialKey used in the message queue that handles new clients
+        printf("pid of while: %d\n", getpid());
         findNewClients();
+
     }
     else if (forked > 0)
     {
         //chat handling
+        printf("pid of forked > 0: %d\n", getpid());
 
     }
     else
@@ -52,8 +60,7 @@ void findNewClients()
     message2Send.mtype = 1;
     memset(message2Send.clientsName, '0',INITIAL_MESSAGE_SIZE);
     
-    unsigned short clientsPIDs[MAX_CLIENTS_NUMBER + 1];
-    memset(clientsPIDs, 0, MAX_CLIENTS_NUMBER + 1); //set all table indexes to 0
+    ClientInfo clientsPIDs[MAX_CLIENTS_NUMBER + 1];
     
     int initialMessageId = msgget(INITIAL_MESSAGE_KEY, IPC_CREAT | IPC_EXCL | MESSAGE_QUEUE_RIGHTS);
     int currentNumberOfClients = 0;
@@ -79,8 +86,7 @@ void findNewClients()
             printf("Max number of clients exceded!\n");
             //tutaj walnąć semafor który zamkniemy, usuniecie klienta spowoduje podniesienie semafora  v  ;
         }
-        printf("%d -> message id\n", initialMessageId);
-
+        message2Rcv.mClientsPID = -1;
         int recivedMessage =  msgrcv(initialMessageId,&message2Rcv, INITIAL_MESSAGE_SIZE, 2, 0);
         if(recivedMessage == -1)
         {
@@ -90,37 +96,24 @@ void findNewClients()
         }
         else
         {
+            int a;
             //new client hass been found!
             if(debug)
-                printf("Recived a message, %d\n", message2Rcv.mClientsPID);
+                printf("Recived a message, %i_%d_sizeof_%d\n", message2Rcv.mClientsPID, INITIAL_MESSAGE_SIZE, recivedMessage);
+            
+            addNewClient(&message2Rcv, clientsPIDs, &currentNumberOfClients);
 
-            addNewClient(message2Rcv.mClientsPID);
-            if(!fork())
+            if(fork() == 0)
             {
                 //childs process - keep private communication with a client in that process
-
+                
             }
 
 
+
+
         }
 
-        printf("2 %d -> message id\n", initialMessageId);
-
-
-
-        int responseMessage = msgsnd(initialMessageId, &message2Send, INITIAL_MESSAGE_SIZE, 0);
-        if(responseMessage == -1)
-        {
-            perror("Error while responding to the client in findNewClients serwer: ");
-        }
-        else
-        {
-            if(debug)
-                printf("Successfully sent data to the new client in findNewClients serwer\n");
-        }
-
-        ///wait for a second before next checking
-        sleep(1);
     }
 
     //delete message queue after the error
@@ -135,9 +128,25 @@ void findNewClients()
             printf("Successfully deleted a queue\n");
     }
 }
-/*
-bool addNewClient(int newClientPID, )
-{
 
+void addNewClient(InitialMessage *newClient, ClientInfo clientPIDSArray[], int *clientsArrayIndex)
+{
+    ClientInfo newClientInfo;
+    newClientInfo.PID = newClient->mClientsPID;
+    newClientInfo.lobbyIndex = -1;
+    strcpy(newClientInfo.nickname, newClient->clientsName);
+    clientPIDSArray[(*clientsArrayIndex)++] = newClientInfo;
+    currentNumberOfClients_GLOBAL = clientsArrayIndex;
 }
-*/
+
+int findClientByPID(int clientPID, ClientInfo *clientsArray)
+{
+    for(int indx = 0 ; indx < currentNumberOfClients_GLOBAL; ++indx)
+    {
+       if(clientsArray[indx].PID == clientPID)
+       {
+            return indx;
+       }
+    }
+    return -1;
+} //return index of a client with PID in array of clientInfo structures
