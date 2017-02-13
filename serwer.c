@@ -14,11 +14,13 @@
 #include "structures.h"
 
 
+//functions
 void findNewClients();
 void addNewClient();
 
 int main(int argc, char * argv [])
 {
+    int shmSemID = semget();
     int forked = fork();
     if(forked == 0)
     {
@@ -48,8 +50,11 @@ void findNewClients()
     InitialMessage message2Send, message2Rcv;
 
     message2Send.mtype = 1;
-    memset(message2Send.mtext, 'n',initialMessageSize);
-    int clientsPIDs[MAX_CLIENTS_NUMBER] = {0};
+    memset(message2Send.clientsName, '0',INITIAL_MESSAGE_SIZE);
+    
+    unsigned short clientsPIDs[MAX_CLIENTS_NUMBER + 1];
+    memset(clientsPIDs, 0, MAX_CLIENTS_NUMBER + 1); //set all table indexes to 0
+    
     int initialMessageId = msgget(INITIAL_MESSAGE_KEY, IPC_CREAT | IPC_EXCL | MESSAGE_QUEUE_RIGHTS);
     int currentNumberOfClients = 0;
     if(initialMessageId == -1)
@@ -76,7 +81,7 @@ void findNewClients()
         }
         printf("%d -> message id\n", initialMessageId);
 
-        int recivedMessage =  msgrcv(initialMessageId,&message2Rcv, initialMessageSize, 2, 0);
+        int recivedMessage =  msgrcv(initialMessageId,&message2Rcv, INITIAL_MESSAGE_SIZE, 2, 0);
         if(recivedMessage == -1)
         {
 
@@ -103,7 +108,7 @@ void findNewClients()
 
 
 
-        int responseMessage = msgsnd(initialMessageId, &message2Send, initialMessageSize, 0);
+        int responseMessage = msgsnd(initialMessageId, &message2Send, INITIAL_MESSAGE_SIZE, 0);
         if(responseMessage == -1)
         {
             perror("Error while responding to the client in findNewClients serwer: ");
@@ -130,8 +135,9 @@ void findNewClients()
             printf("Successfully deleted a queue\n");
     }
 }
+/*
+bool addNewClient(int newClientPID, )
+{
 
-//bool addNewClient(int newClientPID)
-//{
-
-//}
+}
+*/

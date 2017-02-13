@@ -13,6 +13,7 @@
 #include "structures.h"
 
 
+
 int main(int argc, char * argv[])
 {
 	InitialMessage message2Snd, message2Rcv;
@@ -21,7 +22,7 @@ int main(int argc, char * argv[])
 
 
 //strcpy(message.mtext, myPidKey);
-	sprintf(message2Snd.mtext, "%d", myPID);
+	sprintf(message2Snd.clientsName, "%d", myPID);
 	message2Snd.mClientsPID = myPID;
 
 	int initialMessageId = msgget(INITIAL_MESSAGE_KEY, MESSAGE_QUEUE_RIGHTS);
@@ -33,7 +34,7 @@ int main(int argc, char * argv[])
 
 	printf("Sending data to the server\n");
 	//we can send the message to the server
-	if(msgsnd(initialMessageId, &message2Snd, initialMessageSize, 0) == -1)
+	if(msgsnd(initialMessageId, &message2Snd, INITIAL_MESSAGE_SIZE, 0) == -1)
 	{
 		perror("Failed to send initial message to the server!");
 		exit(0);
@@ -42,12 +43,12 @@ int main(int argc, char * argv[])
 	{
 		printf("1.Sent initial message to the server\n");
 	}
-	memset(message2Rcv.mtext, '0', initialMessageSize);
+	memset(message2Rcv.clientsName, '0', INITIAL_MESSAGE_SIZE);
 
 
-	int recivedMessageSize = msgrcv(initialMessageId, &message2Rcv, initialMessageSize, 1,0);
+	int recivedMessageSize = msgrcv(initialMessageId, &message2Rcv, INITIAL_MESSAGE_SIZE, 1,0);
 
-	printf("2.Recived data from a server %s\n", message2Rcv.mtext);
+	printf("2.Recived data from a server %s\n", message2Rcv.clientsName);
 
 
 	//msgctl(initialMessageId, IPC_RMID,0);
