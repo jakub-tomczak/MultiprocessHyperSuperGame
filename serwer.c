@@ -10,10 +10,12 @@
 #include <string.h>
 #include <errno.h>	//errno
 #include <stdlib.h> //exit
+#include <stdbool.h> //bool expressions
 #include "structures.h"
 
 
 void findNewClients();
+void addNewClient();
 
 int main(int argc, char * argv [])
 {
@@ -26,11 +28,12 @@ int main(int argc, char * argv [])
     }
     else if (forked > 0)
     {
-        printf("Server's normal work...\n");
+        //chat handling
+
     }
     else
     {
-        perror("An error occured: ");
+        perror("An error occured when forking in main server: ");
     }
 
     return 0;
@@ -46,24 +49,31 @@ void findNewClients()
 
     message2Send.mtype = 1;
     memset(message2Send.mtext, 'n',initialMessageSize);
-    int clientsPIDs[maxClients] = {0};
+    int clientsPIDs[MAX_CLIENTS_NUMBER] = {0};
     int initialMessageId = msgget(INITIAL_MESSAGE_KEY, IPC_CREAT | IPC_EXCL | MESSAGE_QUEUE_RIGHTS);
+    int currentNumberOfClients = 0;
     if(initialMessageId == -1)
     {
         if(errno == EEXIST)
         {
-            printf("Queue already exists\n");
+            if(debug)
+                printf("Queue already exists\n");
             initialMessageId = msgget(INITIAL_MESSAGE_KEY, MESSAGE_QUEUE_RIGHTS);
         }
         else
         {
-            perror("error getting message queue: ");
+            perror("error getting message queue in findNewClients serwer : ");
             exit(0);
         }
     }
 
     while(true)
     {
+        if(currentNumberOfClients == MAX_CLIENTS_NUMBER)
+        {
+            printf("Max number of clients exceded!\n");
+            //tutaj walnąć semafor który zamkniemy, usuniecie klienta spowoduje podniesienie semafora  v  ;
+        }
         printf("%d -> message id\n", initialMessageId);
 
         int recivedMessage =  msgrcv(initialMessageId,&message2Rcv, initialMessageSize, 2, 0);
@@ -75,7 +85,17 @@ void findNewClients()
         }
         else
         {
-            printf("Recived a message, %d\n", message2Rcv.mClientsPID);
+            //new client hass been found!
+            if(debug)
+                printf("Recived a message, %d\n", message2Rcv.mClientsPID);
+
+            addNewClient(message2Rcv.mClientsPID);
+            if(!fork())
+            {
+                //childs process - keep private communication with a client in that process
+
+            }
+
 
         }
 
@@ -86,11 +106,12 @@ void findNewClients()
         int responseMessage = msgsnd(initialMessageId, &message2Send, initialMessageSize, 0);
         if(responseMessage == -1)
         {
-            perror("Error while responding to the client: ");
+            perror("Error while responding to the client in findNewClients serwer: ");
         }
         else
         {
-            printf("Successfully sent data to the new client\n");
+            if(debug)
+                printf("Successfully sent data to the new client in findNewClients serwer\n");
         }
 
         ///wait for a second before next checking
@@ -101,10 +122,16 @@ void findNewClients()
     int check = msgctl(initialMessageId, IPC_RMID, NULL);
     if(check == -1)
     {
-        perror("Msgctl error");
+        perror("Msgctl error in findNewClients serwer:");
     }
     else
     {
-        printf("Successfully deleted a queue\n");
+        if(debug)
+            printf("Successfully deleted a queue\n");
     }
 }
+
+//bool addNewClient(int newClientPID)
+//{
+
+//}

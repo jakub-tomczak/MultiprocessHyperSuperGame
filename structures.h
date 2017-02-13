@@ -1,10 +1,11 @@
 
 #include <stdio.h>
+#define debug 1
 #define true 1
 #define false 0
 
-#define maxClients 20
-#define maxRooms 10
+#define MAX_CLIENTS_NUMBER 20
+#define MAX_LOBBY_NUMBER 10
 #define MESSAGE_QUEUE_RIGHTS 0777
 
 int INITIAL_MESSAGE_KEY = 9899;
