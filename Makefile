@@ -1,6 +1,9 @@
+CFLAGS=-Wall
+LFLAGS=-std=c99
+CC=gcc
 all: client server
 
 client: client.c
-	gcc -o client.out client.c -Wall
+	$(CC) $(CFLAGS) $(LFLAGS) -o client.out client.c -Wall
 server: serwer.c
-	gcc -o server.out serwer.c
+	$(CC) $(CFLAGS) $(LFLAGS) -o server.out serwer.c
