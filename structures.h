@@ -32,7 +32,6 @@ typedef struct InitialMessage
 	int mClientsPID;
 } InitialMessage;
 
-int privateMessageSize = 10;
 typedef struct PrivateMessage
 {
 	long mtype;
@@ -55,6 +54,7 @@ int sendPrivateMessage(int id, PrivateMessage *message); //sends a private messa
 int receivePrivateMessage(int id, PrivateMessage *message,int messageType); //receives a private message, returns number of bytes received if success, -1 if failed
 int sendInitialMessage(int id, InitialMessage *message);
 int receiveInitialMessage(int id, InitialMessage *message, int messageType);
+int getMessageQueue(int key);   //get - create message queue represented by the key
 
 void resetInitialMessageStructure(InitialMessage *messageToReset)
 {
@@ -71,7 +71,7 @@ void resetPrivateMessageStructure(PrivateMessage *privateMessageToReset)
 
 int sendPrivateMessage(int id, PrivateMessage *message)
 {
-	if(msgsnd(id, &message, INITIAL_MESSAGE_SIZE, 0) == -1)
+	if(msgsnd(id, &message, PRIVATE_MESSAGE_SIZE, 0) == -1)
 	{
 		if(debug)
 			perror("Failed to send private message to the server!");
@@ -85,7 +85,7 @@ int sendPrivateMessage(int id, PrivateMessage *message)
 
 int receivePrivateMessage(int id, PrivateMessage *message, int messageType)
 {
-	    int recivedMessage =  msgrcv(id,&message, INITIAL_MESSAGE_SIZE, messageType, 0);
+	    int recivedMessage =  msgrcv(id,&message, PRIVATE_MESSAGE_SIZE, messageType, 0);
         if(recivedMessage == -1)
         {
         	if(debug)
@@ -120,3 +120,24 @@ int receiveInitialMessage(int id, InitialMessage *message, int messageType)
         }
 
 }//receives a private message, returns number of bytes received if success, -1 if failed
+
+int getMessageQueue(int key)
+{
+    int initialMessageId = msgget(key, IPC_CREAT | MESSAGE_QUEUE_RIGHTS);
+    if(initialMessageId == -1)
+    {
+        if(errno == EEXIST)
+        {
+            if(debug)
+                perror("Queue already exists");
+            initialMessageId = msgget(INITIAL_MESSAGE_KEY, MESSAGE_QUEUE_RIGHTS);
+            return initialMessageId;
+        }
+        else
+        {
+            perror("error getting message queue in findNewClients serwer : ");
+            return -1;
+        }
+    }
+    return initialMessageId;
+}   //get - create message queue represented by the key

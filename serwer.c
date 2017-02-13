@@ -18,7 +18,6 @@
 void findNewClients();
 void addNewClient(InitialMessage *newClient, ClientInfo *clientPIDSArray, int *clientsArrayIndex);
 int findClientByPID(int clientPID, ClientInfo *clientsArray); //return index of a client with PID in array of clientInfo structures
-int getMessageQueue(int key);   //get - create message queue represented by the key
 //globals
 int currentNumberOfClients_GLOBAL = 0;
 
@@ -107,13 +106,32 @@ void findNewClients()
             {
                 //childs process - keep private communication with a client in that process
                 int privateMessageID = getMessageQueue(message2Rcv.mClientsPID);
+                printf("Client's private message id: %d, clitns pid %d\n", privateMessageID, message2Rcv.mClientsPID);
                 if(privateMessageID == -1)
                 {
                     printf("Couldn't launch message queue for client with PID: %d, exiting...\n", message2Rcv.mClientsPID);
                     break;
                 }
+                else
+                {
+                    printf("Got private message queue %d\n", privateMessageID);
+                }
 
                 resetInitialMessageStructure(&message2Rcv); //clears message2Rcv
+
+                PrivateMessage newPrivateMessage;
+                newPrivateMessage.mtype = 0;
+                strcpy(newPrivateMessage.mtext, "twoj stary");
+                
+                if(sendPrivateMessage(privateMessageID, &newPrivateMessage) == -1)
+                {
+                    printf("Error when sending private message to the client!\n");
+                }
+                else
+                {
+                    if(debug)
+                        printf("Sent private message Successfully \n");
+                }
 
                 
             }
@@ -161,23 +179,3 @@ int findClientByPID(int clientPID, ClientInfo *clientsArray)
 } //return index of a client with PID in array of clientInfo structures
 
 
-int getMessageQueue(int key)
-{
-    int initialMessageId = msgget(key, IPC_CREAT | IPC_EXCL | MESSAGE_QUEUE_RIGHTS);
-    if(initialMessageId == -1)
-    {
-        if(errno == EEXIST)
-        {
-            if(debug)
-                printf("Queue already exists\n");
-            initialMessageId = msgget(INITIAL_MESSAGE_KEY, MESSAGE_QUEUE_RIGHTS);
-            return initialMessageId;
-        }
-        else
-        {
-            perror("error getting message queue in findNewClients serwer : ");
-            return -1;
-        }
-    }
-    return initialMessageId;
-}   //get - create message queue represented by the key

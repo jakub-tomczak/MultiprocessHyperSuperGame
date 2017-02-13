@@ -19,8 +19,9 @@ int main(int argc, char * argv[])
 	InitialMessage message2Snd, message2Rcv;
 	message2Snd.mtype = 2;
 	int myPID = getpid();
-	
-	printf("client's pid:%d\n",myPID );
+		int privateMessageID = getMessageQueue(myPID);
+
+	printf("client's private message id:%d _ pid: %d\n",privateMessageID, myPID );
 
 //strcpy(message.mtext, myPidKey);
 	sprintf(message2Snd.clientsName, "%d", myPID);
@@ -46,6 +47,26 @@ int main(int argc, char * argv[])
 	}
 	memset(message2Rcv.clientsName, '0', INITIAL_MESSAGE_SIZE);
 
+
+	if(privateMessageID == -1) 
+	{
+		printf("Nie mozna znalezc/stworzyc prywatnej kolejki dla tego klienta\n");
+	}
+	else
+	{
+		if(debug){
+			printf("Got private message queue %d\n", privateMessageID);
+		}
+	}
+	PrivateMessage newPrivateMessage;
+	if(receivePrivateMessage(privateMessageID, &newPrivateMessage ,0) == -1)
+	{
+		printf("Twoj stary nie doszedl!\n");
+	}
+	else
+	{
+		printf("Wiadomosc prywatna: %s\n", newPrivateMessage.mtext);
+	}
 
 	//int recivedMessageSize = msgrcv(initialMessageId, &message2Rcv, INITIAL_MESSAGE_SIZE, 1,0);
 
