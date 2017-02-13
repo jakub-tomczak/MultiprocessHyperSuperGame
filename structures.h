@@ -71,7 +71,7 @@ void resetPrivateMessageStructure(PrivateMessage *privateMessageToReset)
 
 int sendPrivateMessage(int id, PrivateMessage *message)
 {
-	if(msgsnd(id, &message, PRIVATE_MESSAGE_SIZE, 0) == -1)
+	if(msgsnd(id, message, PRIVATE_MESSAGE_SIZE, 0) == -1)
 	{
 		if(debug)
 			perror("Failed to send private message to the server!");
@@ -85,7 +85,7 @@ int sendPrivateMessage(int id, PrivateMessage *message)
 
 int receivePrivateMessage(int id, PrivateMessage *message, int messageType)
 {
-	    int recivedMessage =  msgrcv(id,&message, PRIVATE_MESSAGE_SIZE, messageType, 0);
+	    int recivedMessage =  msgrcv(id,message, PRIVATE_MESSAGE_SIZE, messageType, 0);
         if(recivedMessage == -1)
         {
         	if(debug)
@@ -97,7 +97,7 @@ int receivePrivateMessage(int id, PrivateMessage *message, int messageType)
 
 int sendInitialMessage(int id, InitialMessage *message)
 {
-	if(msgsnd(id, &message, INITIAL_MESSAGE_SIZE, 0) == -1)
+	if(msgsnd(id, message, INITIAL_MESSAGE_SIZE, 0) == -1)
 	{
 		if(debug)
 			perror("Failed to send private message to the server!");

@@ -120,8 +120,9 @@ void findNewClients()
                 resetInitialMessageStructure(&message2Rcv); //clears message2Rcv
 
                 PrivateMessage newPrivateMessage;
-                newPrivateMessage.mtype = 0;
-                strcpy(newPrivateMessage.mtext, "twoj stary");
+                newPrivateMessage.mtype = 12;
+                strcpy(newPrivateMessage.mtext, "wiadomosc");
+
                 
                 if(sendPrivateMessage(privateMessageID, &newPrivateMessage) == -1)
                 {
@@ -132,6 +133,7 @@ void findNewClients()
                     if(debug)
                         printf("Sent private message Successfully \n");
                 }
+                break;  //to delete queue
 
                 
             }

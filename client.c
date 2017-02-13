@@ -58,7 +58,7 @@ int main(int argc, char * argv[])
 			printf("Got private message queue %d\n", privateMessageID);
 		}
 	}
-	PrivateMessage newPrivateMessage;
+	PrivateMessage newPrivateMessage;	
 	if(receivePrivateMessage(privateMessageID, &newPrivateMessage ,0) == -1)
 	{
 		printf("Twoj stary nie doszedl!\n");
