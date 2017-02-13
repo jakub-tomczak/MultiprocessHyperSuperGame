@@ -20,6 +20,7 @@
 //private message constants
 #define PRIVATE_MESSAGE_KEY 0
 #define PRIVATE_MESSAGE_SIZE 10 + 1
+#define PRIVATE_MESSAGE_RIGHTS 0777
 
 
 //ClientInfo structure 
@@ -50,6 +51,10 @@ typedef struct ClientInfo
 
 void resetInitialMessageStructure(InitialMessage *messageToReset);
 void resetPrivateMessageStructure(PrivateMessage *privateMessageToReset);
+int sendPrivateMessage(int id, PrivateMessage *message); //sends a private message to the client with a message queue of id = id,returns on: success - 1, failure - 0
+int receivePrivateMessage(int id, PrivateMessage *message,int messageType); //receives a private message, returns number of bytes received if success, -1 if failed
+int sendInitialMessage(int id, InitialMessage *message);
+int receiveInitialMessage(int id, InitialMessage *message, int messageType);
 
 void resetInitialMessageStructure(InitialMessage *messageToReset)
 {
@@ -63,3 +68,55 @@ void resetPrivateMessageStructure(PrivateMessage *privateMessageToReset)
 	privateMessageToReset->mtype = 0;
 	memset(privateMessageToReset->mtext, "0",  CLIENTS_NAME_SIZE+1);
 }
+
+int sendPrivateMessage(int id, PrivateMessage *message)
+{
+	if(msgsnd(id, &message, INITIAL_MESSAGE_SIZE, 0) == -1)
+	{
+		if(debug)
+			perror("Failed to send private message to the server!");
+		return 0;
+	}
+	else
+	{
+		return 1;
+	}
+} //sends a private message to the client with a message queue of id = id
+
+int receivePrivateMessage(int id, PrivateMessage *message, int messageType)
+{
+	    int recivedMessage =  msgrcv(id,&message, INITIAL_MESSAGE_SIZE, messageType, 0);
+        if(recivedMessage == -1)
+        {
+        	if(debug)
+            	perror("Error after reciving a message:");
+            return -1;
+        }
+
+}//receives a private message, returns number of bytes received if success, -1 if failed
+
+int sendInitialMessage(int id, InitialMessage *message)
+{
+	if(msgsnd(id, &message, INITIAL_MESSAGE_SIZE, 0) == -1)
+	{
+		if(debug)
+			perror("Failed to send private message to the server!");
+		return 0;
+	}
+	else
+	{
+		return 1;
+	}
+} //sends a private message to the client with a message queue of id = id
+
+int receiveInitialMessage(int id, InitialMessage *message, int messageType)
+{
+	    int recivedMessage =  msgrcv(id,&message, INITIAL_MESSAGE_SIZE, messageType, 0);
+        if(recivedMessage == -1)
+        {
+        	if(debug)
+            	perror("Error after reciving a message:");
+            return -1;
+        }
+
+}//receives a private message, returns number of bytes received if success, -1 if failed

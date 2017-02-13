@@ -18,7 +18,7 @@
 void findNewClients();
 void addNewClient(InitialMessage *newClient, ClientInfo *clientPIDSArray, int *clientsArrayIndex);
 int findClientByPID(int clientPID, ClientInfo *clientsArray); //return index of a client with PID in array of clientInfo structures
-
+int getMessageQueue(int key);   //get - create message queue represented by the key
 //globals
 int currentNumberOfClients_GLOBAL = 0;
 
@@ -61,9 +61,9 @@ void findNewClients()
     memset(message2Send.clientsName, '0',INITIAL_MESSAGE_SIZE);
     
     ClientInfo clientsPIDs[MAX_CLIENTS_NUMBER + 1];
-    
-    int initialMessageId = msgget(INITIAL_MESSAGE_KEY, IPC_CREAT | IPC_EXCL | MESSAGE_QUEUE_RIGHTS);
     int currentNumberOfClients = 0;
+
+    int initialMessageId = msgget(INITIAL_MESSAGE_KEY, IPC_CREAT | IPC_EXCL | MESSAGE_QUEUE_RIGHTS);
     if(initialMessageId == -1)
     {
         if(errno == EEXIST)
@@ -106,6 +106,15 @@ void findNewClients()
             if(fork() == 0)
             {
                 //childs process - keep private communication with a client in that process
+                int privateMessageID = getMessageQueue(message2Rcv.mClientsPID);
+                if(privateMessageID == -1)
+                {
+                    printf("Couldn't launch message queue for client with PID: %d, exiting...\n", message2Rcv.mClientsPID);
+                    break;
+                }
+
+                resetInitialMessageStructure(&message2Rcv); //clears message2Rcv
+
                 
             }
 
@@ -150,3 +159,25 @@ int findClientByPID(int clientPID, ClientInfo *clientsArray)
     }
     return -1;
 } //return index of a client with PID in array of clientInfo structures
+
+
+int getMessageQueue(int key)
+{
+    int initialMessageId = msgget(key, IPC_CREAT | IPC_EXCL | MESSAGE_QUEUE_RIGHTS);
+    if(initialMessageId == -1)
+    {
+        if(errno == EEXIST)
+        {
+            if(debug)
+                printf("Queue already exists\n");
+            initialMessageId = msgget(INITIAL_MESSAGE_KEY, MESSAGE_QUEUE_RIGHTS);
+            return initialMessageId;
+        }
+        else
+        {
+            perror("error getting message queue in findNewClients serwer : ");
+            return -1;
+        }
+    }
+    return initialMessageId;
+}   //get - create message queue represented by the key
