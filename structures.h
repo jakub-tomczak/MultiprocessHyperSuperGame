@@ -4,11 +4,15 @@
 #define true 1
 #define false 0
 
-//lobby constans
-#define MAX_CLIENTS_NUMBER 20
-#define MAX_LOBBY_NUMBER 10
+//sending messages
+#define SERVER_2_CLIENT_TYPE 2
+#define CLIENT_2_SERVER_TYPE 1
 
-//initial message constans
+//lobby constants
+#define MAX_CLIENTS_NUMBER 20
+#define MAX_ROOMS_NUMBER 10
+
+//initial message constants
 #define INITIAL_MESSAGE_KEY  1234
 #define MESSAGE_QUEUE_RIGHTS 0777
 #define CLIENTS_NAME_SIZE 20
@@ -19,9 +23,30 @@
 
 //private message constants
 #define PRIVATE_MESSAGE_KEY 0
-#define PRIVATE_MESSAGE_SIZE 10 + 1
+#define PRIVATE_MESSAGE_SIZE 512
 #define PRIVATE_MESSAGE_RIGHTS 0777
 
+// Game consts - od Witka
+#define GAME_CLIENT_TO_SERVER 1
+#define GAME_SERVER_TO_CLIENT 2
+#define GAME_WANT_TO_CONTINUE 5
+#define GAME_MATRIX_SIZE 4
+#define GAME_ROOM_KEY_ADDER 50
+#define GAME_PLAYER_0_SIGN 'x'
+#define GAME_PLAYER_1_SIGN 'o'
+#define GAME_FINISHED 3
+#define GAME_YOUR_TOUR 2
+#define GAME_MOVE_ACCEPTED 1
+#define GAME_MOVE_REJECTED 0
+
+//Players structure 
+#define PLAYERS_STRUCTURE_KEY 500
+#define PLAYERS_SEMAPHORE_KEY 600
+
+
+//Rooms structure 
+#define ROOMS_STRUCTURE_KEY 501
+#define ROOMS_SEMAPHORE_KEY 601
 
 //ClientInfo structure 
 
@@ -35,7 +60,7 @@ typedef struct InitialMessage
 typedef struct PrivateMessage
 {
 	long mtype;
-	char mtext[PRIVATE_MESSAGE_SIZE + 1];
+	char mtext[PRIVATE_MESSAGE_SIZE];
 } PrivateMessage;
 
 
@@ -47,6 +72,23 @@ typedef struct ClientInfo
 	char nickname[CLIENTS_NAME_SIZE + 1];
 } ClientInfo;
 
+
+typedef struct Player {
+    int pid;
+    int queueId;
+    char name[USER_NAME_LENGTH];
+    int state;
+} Player;
+
+typedef struct Room {
+    int state;
+    Player players[2];
+} Room;
+
+typedef struct GameArray
+{
+	
+}GameArray;
 
 void resetInitialMessageStructure(InitialMessage *messageToReset);
 void resetPrivateMessageStructure(PrivateMessage *privateMessageToReset);
@@ -141,3 +183,8 @@ int getMessageQueue(int key)
     }
     return initialMessageId;
 }   //get - create message queue represented by the key
+
+void showRoomsContent()
+{
+	
+}
