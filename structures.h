@@ -1,11 +1,12 @@
 #define debug 1
 
-#define SEMAPHORE_RAISE 1
-#define SEMAPHORE_DROP -1
+#define SEM_P -1
+#define SEM_V 1
 
 
 #define ROOMS_STRUCTURE_KEY 500
 #define ROOMS_SEMAPHORE_KEY 600
+
 
 #define PLAYERS_STRUCTURE_KEY 501
 #define PLAYERS_SEMAPHORE_KEY 601
@@ -32,10 +33,12 @@
 #define LOBBY_SIZE 10
 #define LOBBY_STRUCTURE_KEY 665
 #define LOBBY_SEMAPHORE_KEY 665
+#define LOBBY_MEMORY_KEY 700
+#define LOBBY_SEMAPHORE_NUMBER 1
 #define ROOM_EMPTY 0
 #define ROOM_PLAYER_AWAITING 1
 #define ROOM_IN_GAME 2
-#define MAX_ROOMS_NUMBER MAX_PLAYER_NUMBER/2
+#define MAX_ROOMS_NUMBER 10
 
 // Game consts
 #define GAME_CLIENT_TO_SERVER 1
@@ -59,44 +62,54 @@
 #define ANSI_COLOR_CYAN    "\x1b[36m"
 #define ANSI_COLOR_RESET   "\x1b[0m"
 
+
+
 typedef struct GameMatrix {
     int sem;
     int memKey;
     char *matrix;
 } GameMatrix;
 
+/*
 typedef struct Player {
     int pid;
     int queueId;
     char name[USER_NAME_LENGTH];
     int state;
 } Player;
-
+*/
+//used internally on server side
+typedef struct ClientInfo
+{
+	int PID;
+	int lobbyIndex;
+	char nickname[USER_NAME_LENGTH];
+} ClientInfo;
 typedef struct Room {
     int state;
-    Player players[2];
+    ClientInfo players[2];
 } Room;
 
 typedef struct Lobby {
-    int sem;
-    int memKey;
+    int semID;
+    int shmID;
     Room * rooms;
 } Lobby;
 
 typedef struct PlayersMemory {
     int sem;
     int memKey;
-    Player * players;
+    ClientInfo * players;
 } PlayersMemory;
 
 typedef struct PrivateMessage {
     long type;
-    char command[MESSAGE_CONTENT_SIZE];
+    char content[MESSAGE_CONTENT_SIZE];
 } PrivateMessage;
 
 typedef struct ChatMessage {
     long type;
-    char source[USER_NAME_LENGTH];
+    char username[USER_NAME_LENGTH];
     char content[MESSAGE_CONTENT_SIZE];
 } ChatMessage;
 
@@ -106,13 +119,6 @@ typedef struct InitialMessage {
     char username[USER_NAME_LENGTH];
 } InitialMessage;
 
-//used internally on server side
-typedef struct ClientInfo
-{
-	int PID;
-	int lobbyIndex;
-	char nickname[USER_NAME_LENGTH];
-} ClientInfo;
 
 //functions
 void resetInitialMessageStructure(InitialMessage *messageToReset);
@@ -135,7 +141,7 @@ void resetInitialMessageStructure(InitialMessage *messageToReset)
 void resetPrivateMessageStructure(PrivateMessage *privateMessageToReset)
 {
 	privateMessageToReset->type = 0;
-	memset(privateMessageToReset->command, "0",  MESSAGE_CONTENT_SIZE);
+	memset(privateMessageToReset->content, "0",  MESSAGE_CONTENT_SIZE);
 }
 
 int sendPrivateMessage(int id, PrivateMessage *message)
@@ -143,18 +149,15 @@ int sendPrivateMessage(int id, PrivateMessage *message)
 	if(msgsnd(id, message, sizeof(*message) - sizeof(message->type), 0) == -1)
 	{
 		if(debug)
-			perror("Failed to send private message to the server!");
-		return 0;
+			perror("Failed to send private message!");
+		return -1;
 	}
-	else
-	{
-		return 1;
-	}
+	return 1;
+	
 } //sends a private message to the client with a message queue of id = id
 
 int receivePrivateMessage(int id, PrivateMessage *message, int messageType)
-{
-	printf("message length %d\n",sizeof(*message) - sizeof(message->type));	
+{	
 	    int recivedMessage =  msgrcv(id,message, sizeof(*message) - sizeof(message->type), messageType, 0);
         if(recivedMessage == -1)
         {
@@ -162,6 +165,7 @@ int receivePrivateMessage(int id, PrivateMessage *message, int messageType)
             	perror("Error after reciving a message:");
             return -1;
         }
+        return recivedMessage;
 
 }//receives a private message, returns number of bytes received if success, -1 if failed
 
@@ -172,7 +176,7 @@ int sendInitialMessage(int id, InitialMessage *message)
 	if(msgsnd(id, message, sizeof(*message) - sizeof(message->type), 0) == -1)
 	{
 		if(debug)
-			perror("Failed to send private message to the server!");
+			perror("Failed to send private message!");
 		return -1;
 	}
 	else
@@ -184,13 +188,14 @@ int sendInitialMessage(int id, InitialMessage *message)
 int receiveInitialMessage(int id, InitialMessage *message, int messageType)
 {
 	printf("Receiving initial message");
-	    int recivedMessage =  msgrcv(id,&message, sizeof(*message) - sizeof(message->type), messageType, 0);
+	    int recivedMessage =  msgrcv(id,message, sizeof(*message) - sizeof(message->type), messageType, 0);
         if(recivedMessage == -1)
         {
         	if(debug)
             	perror("Error after reciving a message:");
             return -1;
         }
+        return recivedMessage;
 
 }//receives a private message, returns number of bytes received if success, -1 if failed
 
@@ -200,7 +205,7 @@ int sendChatMessage(int id, ChatMessage *message)
 	if(msgsnd(id, message, sizeof(*message) - sizeof(message->type), 0) == -1)
 	{
 		if(debug)
-			perror("Failed to send private message to the server!");
+			perror("Failed to send private message!");
 		return -1;
 	}
 	else
@@ -211,7 +216,6 @@ int sendChatMessage(int id, ChatMessage *message)
 
 int receiveChatMessage(int id, ChatMessage *message, int messageType)
 {
-	printf("message length %d\n",sizeof(*message) - sizeof(message->type));	
 	    int recivedMessage =  msgrcv(id,message, sizeof(*message) - sizeof(message->type), messageType, 0);
         if(recivedMessage == -1)
         {
@@ -219,6 +223,7 @@ int receiveChatMessage(int id, ChatMessage *message, int messageType)
             	perror("Error after reciving a message:");
             return -1;
         }
+        return recivedMessage;
 
 }//receives a private message, returns number of bytes received if success, -1 if failed
 
@@ -232,7 +237,7 @@ int getMessageQueue(int key)
         {
             if(debug)
                 perror("Queue already exists");
-            initialMessageId = msgget(INITIAL_MESSAGE_KEY, DEFAULT_RIGHTS);
+            initialMessageId = msgget(key, DEFAULT_RIGHTS);
             return initialMessageId;
         }
         else
@@ -248,3 +253,4 @@ void showRoomsContent()
 {
 	;
 }
+

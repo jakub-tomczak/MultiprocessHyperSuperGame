@@ -11,8 +11,11 @@
 #include <stdlib.h>
 #include <errno.h>	//errno
 #include "structures.h"
+#include <stdbool.h>
 
 int initializeChat(int parentPID);
+
+bool serverAvailable = true;
 
 int main(int argc, char * argv[])
 {
@@ -26,30 +29,7 @@ int main(int argc, char * argv[])
 	InitialMessage message2Snd;
 	message2Snd.type = GAME_CLIENT_TO_SERVER;
 	int myPID = getpid();
-	int privateMessageID = getMessageQueue(myPID);
 
-	sprintf(message2Snd.username, "%d", myPID);
-	message2Snd.pid = myPID;
-
-	int initialMessageId = getMessageQueue(INITIAL_MESSAGE_KEY);
-	if(initialMessageId == -1)
-	{
-			perror("Failed to find the server");
-			exit(0);
-	}
-	printf("Connected with server\n");
-	//we can send the message to the server
-	message2Snd.type = GAME_CLIENT_TO_SERVER;
-	int msgSnd = sendInitialMessage(initialMessageId, &message2Snd);
-	if(msgSnd == -1)
-	{
-		perror("Failed to send initial message to the server!");
-		exit(0);
-	}
-	else
-	{
-		printf("Sent a  %d\n", message2Snd.type);
-	}
 	int forked = fork();
 	if(forked == 0)
 	{
@@ -58,9 +38,8 @@ int main(int argc, char * argv[])
 		
 //		if(chatListenerFork == 0)
 //		{
-		printf("opening chat\n");
-			execl("/usr/bin/gnome-terminal", "gnome-terminal" , "-x" ,"./chat.out", myPID_char,NULL);
-			perror("Failed to open chat window: ");
+			//execl("/usr/bin/gnome-terminal", "gnome-terminal" , "-x" ,"./chat.out", myPID_char, username,NULL);
+			//perror("Failed to open chat window: ");
 /*
 		}
 		else if(chatListenerFork > 0)
@@ -77,6 +56,32 @@ int main(int argc, char * argv[])
 	}
 	else
 	{
+		int privateMessageID = getMessageQueue(myPID);
+
+		sprintf(message2Snd.username, "%d", myPID);
+		message2Snd.pid = myPID;
+		message2Snd.type = GAME_CLIENT_TO_SERVER;
+
+	int initialMessageId = getMessageQueue(INITIAL_MESSAGE_KEY);
+	if(initialMessageId == -1)
+	{
+			perror("Failed to find the server");
+			serverAvailable =false;
+			exit(0);
+	}
+	printf("Connected with server\n");
+	//we can send the message to the server
+	int msgSnd = sendInitialMessage(initialMessageId, &message2Snd);
+	if(msgSnd == -1)
+	{
+		perror("Failed to send initial message to the server!");
+		exit(0);
+	}
+	else
+	{
+		printf("Sent a  %d\n", message2Snd.type);
+	}
+
 
 		if(privateMessageID == -1) 
 		{
@@ -93,6 +98,20 @@ int main(int argc, char * argv[])
 		{
 			perror("Blad podczas odbioru Wiadomosci z serwera! ");
 			exit(0);
+		}
+		else
+		{
+			printf("Server pid:%s\n", newPrivateMessage.content);
+		}
+		resetPrivateMessageStructure( &newPrivateMessage);
+		if(receivePrivateMessage(privateMessageID, &newPrivateMessage ,GAME_SERVER_TO_CLIENT) == -1)
+		{
+			perror("Blad podczas odbioru Wiadomosci z serwera! ");
+			exit(0);
+		}
+		else
+		{
+			printf("2Server pid:%s\n", newPrivateMessage.content);
 		}
 
 	}

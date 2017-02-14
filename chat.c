@@ -19,7 +19,8 @@ int initializeMessageQueue(int key);
 
 int main(int argc, char const *argv[]) {
 	int parentPid = atoi(argv[1]);
-        
+	char username[USER_NAME_LENGTH];
+	strcpy(username,argv[2]);
 	int messageID = initializeMessageQueue(parentPid);
 
 	if(messageID == -1)
@@ -55,7 +56,7 @@ int main(int argc, char const *argv[]) {
 					int receivedMessage = receiveChatMessage(messageID, &chatMessage, CHAT_SERVER_TO_CLIENT);
 					if(receivedMessage != -1)
 					{
-						printf("%s napisal(a): %s\n\n",chatMessage.source, chatMessage.content);
+						printf("%s napisal(a): %s\n\n",chatMessage.username, chatMessage.content);
 					}
 				}
 
@@ -65,10 +66,12 @@ int main(int argc, char const *argv[]) {
 				while(continueWorking)
 				{
 					ChatMessage chatMessage;
+					strcpy(chatMessage.username, username);
+					
 					chatMessage.type = CHAT_CLIENT_TO_SERVER;
-					printf("Podaj wiadomosc: ");
+					printf("-> ");
 					char messageContent[MESSAGE_CONTENT_SIZE];
-					scanf("%512s", messageContent);
+					fgets( chatMessage.content,MESSAGE_CONTENT_SIZE, stdin);
 					int sentMessage = sendChatMessage(messageID, &chatMessage);
 					if(sentMessage == -1)
 					{
