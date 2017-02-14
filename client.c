@@ -16,27 +16,31 @@
 
 int main(int argc, char * argv[])
 {
-	InitialMessage message2Snd, message2Rcv;
-	message2Snd.mtype = 2;
+	char username[USER_NAME_LENGTH];
+	printf("Wpisz swoja nazwe uzytkownika: ");
+	scanf("%49s", username);
+
+	printf("Witaj, %s\n", username);
+
+
+	InitialMessage message2Snd;
+	message2Snd.type = GAME_CLIENT_TO_SERVER;
 	int myPID = getpid();
-		int privateMessageID = getMessageQueue(myPID);
+	int privateMessageID = getMessageQueue(myPID);
 
-	printf("client's private message id:%d _ pid: %d\n",privateMessageID, myPID );
+	sprintf(message2Snd.username, "%d", myPID);
+	message2Snd.pid = myPID;
 
-//strcpy(message.mtext, myPidKey);
-	sprintf(message2Snd.clientsName, "%d", myPID);
-	message2Snd.mClientsPID = myPID;
-
-	int initialMessageId = msgget(INITIAL_MESSAGE_KEY, MESSAGE_QUEUE_RIGHTS);
+	int initialMessageId = msgget(INITIAL_MESSAGE_KEY, DEFAULT_RIGHTS);
 	if(initialMessageId == -1)
 	{
 			perror("Failed to find the server");
 			exit(0);
 	}
 
-	printf("Sending data to the server\n");
+	printf("Connecting with the server\n");
 	//we can send the message to the server
-	if(msgsnd(initialMessageId, &message2Snd, INITIAL_MESSAGE_SIZE, 0) == -1)
+	if(msgsnd(initialMessageId, &message2Snd, sizeof(message2Snd) - sizeof(message2Snd.type), 0) == -1)
 	{
 		perror("Failed to send initial message to the server!");
 		exit(0);
@@ -45,7 +49,6 @@ int main(int argc, char * argv[])
 	{
 		printf("1.Sent initial message to the server\n");
 	}
-	memset(message2Rcv.clientsName, '0', INITIAL_MESSAGE_SIZE);
 
 
 	if(privateMessageID == -1) 
@@ -61,12 +64,12 @@ int main(int argc, char * argv[])
 	PrivateMessage newPrivateMessage;	
 	if(receivePrivateMessage(privateMessageID, &newPrivateMessage ,0) == -1)
 	{
-		printf("Twoj stary nie doszedl!\n");
+		perror("Blad podczas odbioru Wiadomosci z serwera! ");
+		exit(0);
 	}
-	else
-	{
-		printf("Wiadomosc prywatna: %s\n", newPrivateMessage.mtext);
-	}
+
+
+
 
 	//int recivedMessageSize = msgrcv(initialMessageId, &message2Rcv, INITIAL_MESSAGE_SIZE, 1,0);
 

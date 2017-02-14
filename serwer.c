@@ -18,13 +18,47 @@
 void findNewClients();
 void addNewClient(InitialMessage *newClient, ClientInfo *clientPIDSArray, int *clientsArrayIndex);
 int findClientByPID(int clientPID, ClientInfo *clientsArray); //return index of a client with PID in array of clientInfo structures
+
+    ///SHARED MEMORY
+int initializePlayers();    //returns id to shm
+int initializeRooms();      //returns id to shm
+
+
+
+    ///SEMAPHORES
+int roomLock();             //group of sem to rooms
+int playersLimitLock();     //returns id to lock sem of max players
+
+
 //globals
 int currentNumberOfClients_GLOBAL = 0;
 
 
+
 int main(int argc, char * argv [])
 {
-    int shmSemID = semget();
+    //semafory:
+    /*
+        pola z planszą dla każdego z pokojow
+        liczba graczy
+
+
+
+
+    */
+
+    /*
+    shared memory
+        kazda z plansz
+        pokoje
+
+
+    */
+
+
+    int roomsShmID = initializeRooms();
+    int playersShmID = initializePlayers();
+    
     int forked = fork();
     if(forked == 0)
     {
@@ -54,22 +88,19 @@ int main(int argc, char * argv [])
 void findNewClients()
 {
         //initialization of messages structures
-    InitialMessage message2Send, message2Rcv;
-
-    message2Send.mtype = 1;
-    memset(message2Send.clientsName, '0',INITIAL_MESSAGE_SIZE);
+    InitialMessage  message2Rcv;
     
-    ClientInfo clientsPIDs[MAX_CLIENTS_NUMBER + 1];
+    ClientInfo clientsPIDs[MAX_PLAYER_NUMBER];
     int currentNumberOfClients = 0;
-
-    int initialMessageId = msgget(INITIAL_MESSAGE_KEY, IPC_CREAT | IPC_EXCL | MESSAGE_QUEUE_RIGHTS);
+        printf("sadsa\n");
+    int initialMessageId = msgget(INITIAL_MESSAGE_KEY, IPC_CREAT | IPC_EXCL | DEFAULT_RIGHTS);
     if(initialMessageId == -1)
     {
         if(errno == EEXIST)
         {
             if(debug)
                 printf("Queue already exists\n");
-            initialMessageId = msgget(INITIAL_MESSAGE_KEY, MESSAGE_QUEUE_RIGHTS);
+            initialMessageId = msgget(INITIAL_MESSAGE_KEY, DEFAULT_RIGHTS);
         }
         else
         {
@@ -80,13 +111,14 @@ void findNewClients()
 
     while(true)
     {
-        if(currentNumberOfClients == MAX_CLIENTS_NUMBER)
+        if(currentNumberOfClients == MAX_PLAYER_NUMBER)
         {
             printf("Max number of clients exceded!\n");
             //tutaj walnąć semafor który zamkniemy, usuniecie klienta spowoduje podniesienie semafora  v  ;
         }
-        message2Rcv.mClientsPID = -1;
-        int recivedMessage =  msgrcv(initialMessageId,&message2Rcv, INITIAL_MESSAGE_SIZE, 2, 0);
+        message2Rcv.pid = -1;
+        int recivedMessage =  receiveInitialMessage(initialMessageId, &message2Rcv, GAME_CLIENT_TO_SERVER);
+
         if(recivedMessage == -1)
         {
 
@@ -95,21 +127,18 @@ void findNewClients()
         }
         else
         {
-            int a;
             //new client hass been found!
-            if(debug)
-                printf("Recived a message, %i_%d_sizeof_%d\n", message2Rcv.mClientsPID, INITIAL_MESSAGE_SIZE, recivedMessage);
             
             addNewClient(&message2Rcv, clientsPIDs, &currentNumberOfClients);
 
             if(fork() == 0)
             {
                 //childs process - keep private communication with a client in that process
-                int privateMessageID = getMessageQueue(message2Rcv.mClientsPID);
-                printf("Client's private message id: %d, clitns pid %d\n", privateMessageID, message2Rcv.mClientsPID);
+                int privateMessageID = getMessageQueue(message2Rcv.pid);
+                printf("Client's private message id: %d, clitns pid %d\n", privateMessageID, message2Rcv.pid);
                 if(privateMessageID == -1)
                 {
-                    printf("Couldn't launch message queue for client with PID: %d, exiting...\n", message2Rcv.mClientsPID);
+                    printf("Couldn't launch message queue for client with PID: %d, exiting...\n", message2Rcv.pid);
                     break;
                 }
                 else
@@ -119,9 +148,10 @@ void findNewClients()
 
                 resetInitialMessageStructure(&message2Rcv); //clears message2Rcv
 
+                //sends message with id of shared memory - with rooms
                 PrivateMessage newPrivateMessage;
-                newPrivateMessage.mtype = 12;
-                strcpy(newPrivateMessage.mtext, "wiadomosc");
+                newPrivateMessage.type = GAME_SERVER_TO_CLIENT;
+                //sprintf();
 
                 
                 if(sendPrivateMessage(privateMessageID, &newPrivateMessage) == -1)
@@ -161,9 +191,9 @@ void findNewClients()
 void addNewClient(InitialMessage *newClient, ClientInfo clientPIDSArray[], int *clientsArrayIndex)
 {
     ClientInfo newClientInfo;
-    newClientInfo.PID = newClient->mClientsPID;
+    newClientInfo.PID = newClient->pid;
     newClientInfo.lobbyIndex = -1;
-    strcpy(newClientInfo.nickname, newClient->clientsName);
+    strcpy(newClientInfo.nickname, newClient->username);
     clientPIDSArray[(*clientsArrayIndex)++] = newClientInfo;
     currentNumberOfClients_GLOBAL = clientsArrayIndex;
 }
@@ -180,4 +210,55 @@ int findClientByPID(int clientPID, ClientInfo *clientsArray)
     return -1;
 } //return index of a client with PID in array of clientInfo structures
 
+
+
+
+///FUNCTIONS FOR SHARED MEMORY
+int initializePlayers()
+{
+    int memoryID = shmget(PLAYERS_STRUCTURE_KEY, sizeof(Player) * MAX_PLAYER_NUMBER, IPC_CREAT | DEFAULT_RIGHTS);
+    if(memoryID == -1)
+    {
+        perror("Failed to initialize players memory ");
+        return -1;
+    }
+    return memoryID;
+
+}   //returns id to shm
+int initializeRooms()
+{
+    int memoryID = shmget(ROOMS_STRUCTURE_KEY, sizeof(Room) * MAX_ROOMS_NUMBER, IPC_CREAT | DEFAULT_RIGHTS);
+    if(memoryID == -1)
+    {
+        perror("Failed to initialize rooms memory ");
+        return -1;
+    }
+    return memoryID;
+}     //returns id to shm
+
+
+
+
+
+///FUNCTIONS FOR SEMAPHORES
+int roomLock()
+{
+    int semaphoreID = semget(ROOMS_SEMAPHORE_KEY, 1, IPC_CREAT | DEFAULT_RIGHTS);
+    if(semaphoreID == -1)
+    {
+        perror("Failed to initialize semaphore for rooms: ");
+        return -1;
+    }
+    return semaphoreID;
+}            //group of sem to rooms
+int playersLimitLock()
+{
+    int semaphoreID = semget(PLAYERS_SEMAPHORE_KEY, MAX_PLAYER_NUMBER, IPC_CREAT | 0777);
+    if(semaphoreID == -1)
+    {
+        perror("Failed to initialize semaphore for rooms: ");
+        return -1;
+    }
+    return semaphoreID;
+}     //returns id to lock sem of max players
 
