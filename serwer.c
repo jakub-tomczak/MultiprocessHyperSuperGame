@@ -71,8 +71,12 @@ int main(int argc, char * argv [])
     else if (forked > 0)
     {
         //chat handling
-        printf("pid of forked > 0: %d\n", getpid());
-
+        int chatQueue = getMessageQueue(CHAT_MESSAGE_KEY);
+        if(chatQueue == -1)
+        {
+            printf("Failed to start chat\n");
+            exit(0);
+        }
     }
     else
     {
@@ -93,20 +97,13 @@ void findNewClients()
     ClientInfo clientsPIDs[MAX_PLAYER_NUMBER];
     int currentNumberOfClients = 0;
         printf("sadsa\n");
-    int initialMessageId = msgget(INITIAL_MESSAGE_KEY, IPC_CREAT | IPC_EXCL | DEFAULT_RIGHTS);
+    int initialMessageId = getMessageQueue(INITIAL_MESSAGE_KEY);
     if(initialMessageId == -1)
     {
-        if(errno == EEXIST)
-        {
-            if(debug)
-                printf("Queue already exists\n");
-            initialMessageId = msgget(INITIAL_MESSAGE_KEY, DEFAULT_RIGHTS);
-        }
-        else
-        {
+     
             perror("error getting message queue in findNewClients serwer : ");
             exit(0);
-        }
+    
     }
 
     while(true)
@@ -116,13 +113,14 @@ void findNewClients()
             printf("Max number of clients exceded!\n");
             //tutaj walnąć semafor który zamkniemy, usuniecie klienta spowoduje podniesienie semafora  v  ;
         }
-        message2Rcv.pid = -1;
+       // message2Rcv.pid = -1;
         int recivedMessage =  receiveInitialMessage(initialMessageId, &message2Rcv, GAME_CLIENT_TO_SERVER);
-
+printf("ssdfsdf");
         if(recivedMessage == -1)
         {
 
             perror("Error after reciving a message:");
+
             break;
         }
         else

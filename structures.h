@@ -23,6 +23,7 @@
 #define PLAYER_DISCONNECTED 0
 
 // Chat consts
+#define CHAT_MESSAGE_KEY 503
 #define MESSAGE_CONTENT_SIZE 512
 #define CHAT_CLIENT_TO_SERVER 3
 #define CHAT_SERVER_TO_CLIENT 4
@@ -120,6 +121,8 @@ int sendPrivateMessage(int id, PrivateMessage *message); //sends a private messa
 int receivePrivateMessage(int id, PrivateMessage *message,int messageType); //receives a private message, returns number of bytes received if success, -1 if failed
 int sendInitialMessage(int id, InitialMessage *message);
 int receiveInitialMessage(int id, InitialMessage *message, int messageType);
+int sendChatMessage(int id, ChatMessage *message);
+int receiveChatMessage(int id, ChatMessage *message, int messageType);
 int getMessageQueue(int key);   //get - create message queue represented by the key
 
 void resetInitialMessageStructure(InitialMessage *messageToReset)
@@ -164,13 +167,13 @@ int receivePrivateMessage(int id, PrivateMessage *message, int messageType)
 
 int sendInitialMessage(int id, InitialMessage *message)
 {
-		printf("initial send message length %d\n",sizeof(*message) - sizeof(message->type));	
+		printf("initial send message type %d\n",message->type);	
 
 	if(msgsnd(id, message, sizeof(*message) - sizeof(message->type), 0) == -1)
 	{
 		if(debug)
 			perror("Failed to send private message to the server!");
-		return 0;
+		return -1;
 	}
 	else
 	{
@@ -180,7 +183,7 @@ int sendInitialMessage(int id, InitialMessage *message)
 
 int receiveInitialMessage(int id, InitialMessage *message, int messageType)
 {
-
+	printf("Receiving initial message");
 	    int recivedMessage =  msgrcv(id,&message, sizeof(*message) - sizeof(message->type), messageType, 0);
         if(recivedMessage == -1)
         {
@@ -190,6 +193,35 @@ int receiveInitialMessage(int id, InitialMessage *message, int messageType)
         }
 
 }//receives a private message, returns number of bytes received if success, -1 if failed
+
+
+int sendChatMessage(int id, ChatMessage *message)
+{
+	if(msgsnd(id, message, sizeof(*message) - sizeof(message->type), 0) == -1)
+	{
+		if(debug)
+			perror("Failed to send private message to the server!");
+		return -1;
+	}
+	else
+	{
+		return 1;
+	}
+} //sends a private message to the client with a message queue of id = id
+
+int receiveChatMessage(int id, ChatMessage *message, int messageType)
+{
+	printf("message length %d\n",sizeof(*message) - sizeof(message->type));	
+	    int recivedMessage =  msgrcv(id,message, sizeof(*message) - sizeof(message->type), messageType, 0);
+        if(recivedMessage == -1)
+        {
+        	if(debug)
+            	perror("Error after reciving a message:");
+            return -1;
+        }
+
+}//receives a private message, returns number of bytes received if success, -1 if failed
+
 
 int getMessageQueue(int key)
 {

@@ -12,7 +12,7 @@
 #include <errno.h>	//errno
 #include "structures.h"
 
-
+int initializeChat(int parentPID);
 
 int main(int argc, char * argv[])
 {
@@ -31,52 +31,73 @@ int main(int argc, char * argv[])
 	sprintf(message2Snd.username, "%d", myPID);
 	message2Snd.pid = myPID;
 
-	int initialMessageId = msgget(INITIAL_MESSAGE_KEY, DEFAULT_RIGHTS);
+	int initialMessageId = getMessageQueue(INITIAL_MESSAGE_KEY);
 	if(initialMessageId == -1)
 	{
 			perror("Failed to find the server");
 			exit(0);
 	}
-
-	printf("Connecting with the server\n");
+	printf("Connected with server\n");
 	//we can send the message to the server
-	if(msgsnd(initialMessageId, &message2Snd, sizeof(message2Snd) - sizeof(message2Snd.type), 0) == -1)
+	message2Snd.type = GAME_CLIENT_TO_SERVER;
+	int msgSnd = sendInitialMessage(initialMessageId, &message2Snd);
+	if(msgSnd == -1)
 	{
 		perror("Failed to send initial message to the server!");
 		exit(0);
 	}
 	else
 	{
-		printf("1.Sent initial message to the server\n");
+		printf("Sent a  %d\n", message2Snd.type);
 	}
-
-
-	if(privateMessageID == -1) 
+	int forked = fork();
+	if(forked == 0)
 	{
-		printf("Nie mozna znalezc/stworzyc prywatnej kolejki dla tego klienta\n");
+		char myPID_char[5];
+		sprintf(myPID_char, "%d", myPID);
+		
+//		if(chatListenerFork == 0)
+//		{
+		printf("opening chat\n");
+			execl("/usr/bin/gnome-terminal", "gnome-terminal" , "-x" ,"./chat.out", myPID_char,NULL);
+			perror("Failed to open chat window: ");
+/*
+		}
+		else if(chatListenerFork > 0)
+		{	//creating chat message queue or connecting to the existing one
+			int chatID= initializeChat(myPID);
+			if(chatID != -1)
+			{
+				printf("Connected with chat client!\n");
+			}
+		}
+*/		
+
+
 	}
 	else
 	{
-		if(debug){
-			printf("Got private message queue %d\n", privateMessageID);
+
+		if(privateMessageID == -1) 
+		{
+			printf("Nie mozna znalezc/stworzyc prywatnej kolejki dla tego klienta\n");
 		}
+		else
+		{
+			if(debug){
+				printf("Got private message queue %d\n", privateMessageID);
+			}
+		}
+		PrivateMessage newPrivateMessage;
+		if(receivePrivateMessage(privateMessageID, &newPrivateMessage ,GAME_SERVER_TO_CLIENT) == -1)
+		{
+			perror("Blad podczas odbioru Wiadomosci z serwera! ");
+			exit(0);
+		}
+
 	}
-	PrivateMessage newPrivateMessage;	
-	if(receivePrivateMessage(privateMessageID, &newPrivateMessage ,0) == -1)
-	{
-		perror("Blad podczas odbioru Wiadomosci z serwera! ");
-		exit(0);
-	}
 
 
-
-
-	//int recivedMessageSize = msgrcv(initialMessageId, &message2Rcv, INITIAL_MESSAGE_SIZE, 1,0);
-
-	//printf("2.Recived data from a server %s\n", message2Rcv.clientsName);
-
-
-	//msgctl(initialMessageId, IPC_RMID,0);
 	return 0;
 
 
@@ -84,3 +105,8 @@ int main(int argc, char * argv[])
 
 }
 
+int initializeChat(int parentPID)
+{
+	int mesageID = getMessageQueue(CHAT_MESSAGE_KEY);
+
+}
