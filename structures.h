@@ -14,7 +14,7 @@
 #define INITIAL_MESSAGE_KEY 1234
 #define DEFAULT_RIGHTS 0777
 #define SERVER_INTERNAL_QUEUE_KEY 123
-#define MAX_PLAYER_NUMBER 100
+#define MAX_PLAYER_NUMBER 20
 #define MAX_PID_SIZE 4
 
 #define USER_NAME_LENGTH 50
@@ -30,7 +30,6 @@
 #define CHAT_SERVER_TO_CLIENT 4
 
 // Lobby consts
-#define LOBBY_SIZE 10
 #define LOBBY_STRUCTURE_KEY 665
 #define LOBBY_SEMAPHORE_KEY 665
 #define LOBBY_MEMORY_KEY 700
@@ -39,12 +38,14 @@
 #define ROOM_PLAYER_AWAITING 1
 #define ROOM_IN_GAME 2
 #define MAX_ROOMS_NUMBER 10
+#define ROOM_MEMORY_KEY 701
 
 // Game consts
 #define GAME_CLIENT_TO_SERVER 1
 #define GAME_SERVER_TO_CLIENT 2
 #define GAME_WANT_TO_CONTINUE 5
-#define GAME_MATRIX_SIZE 4
+#define GAME_MATRIX_SIZE 5
+#define GAME_MATRIX_CELLS GAME_MATRIX_SIZE*GAME_MATRIX_SIZE
 #define GAME_ROOM_KEY_ADDER 50
 #define GAME_PLAYER_0_SIGN 'x'
 #define GAME_PLAYER_1_SIGN 'o'
@@ -65,26 +66,26 @@
 
 
 typedef struct GameMatrix {
-    int sem;
-    int memKey;
-    char *matrix;
+    int semID;
+    int memID;
+    char matrix[GAME_MATRIX_CELLS];
 } GameMatrix;
 
-/*
-typedef struct Player {
-    int pid;
-    int queueId;
-    char name[USER_NAME_LENGTH];
-    int state;
-} Player;
-*/
+
+
+
 //used internally on server side
 typedef struct ClientInfo
 {
 	int PID;
-	int lobbyIndex;
+	int roomIndex;
 	char nickname[USER_NAME_LENGTH];
 } ClientInfo;
+typedef struct Players {
+    int memID;
+    int semID;
+    ClientInfo *clients;
+} Players;
 typedef struct Room {
     int state;
     ClientInfo players[2];
@@ -93,14 +94,8 @@ typedef struct Room {
 typedef struct Lobby {
     int semID;
     int shmID;
-    Room * rooms;
+    Room *rooms;
 } Lobby;
-
-typedef struct PlayersMemory {
-    int sem;
-    int memKey;
-    ClientInfo * players;
-} PlayersMemory;
 
 typedef struct PrivateMessage {
     long type;
@@ -130,6 +125,8 @@ int receiveInitialMessage(int id, InitialMessage *message, int messageType);
 int sendChatMessage(int id, ChatMessage *message);
 int receiveChatMessage(int id, ChatMessage *message, int messageType);
 int getMessageQueue(int key);   //get - create message queue represented by the key
+ClientInfo getEmptyClientInfo();
+Room getEmptyRoom();
 
 void resetInitialMessageStructure(InitialMessage *messageToReset)
 {
@@ -142,6 +139,26 @@ void resetPrivateMessageStructure(PrivateMessage *privateMessageToReset)
 {
 	privateMessageToReset->type = 0;
 	memset(privateMessageToReset->content, "0",  MESSAGE_CONTENT_SIZE);
+
+}
+
+
+Room getEmptyRoom()
+{
+	Room room;
+	for(int i=0;i<2;i++)
+		room.players[i] = getEmptyClientInfo();
+	room.state = ROOM_EMPTY;
+	return room;
+}
+
+ClientInfo getEmptyClientInfo()
+{
+	ClientInfo clientInfo;
+	clientInfo.PID = -1;
+	clientInfo.roomIndex = -1;
+	strcpy(clientInfo.nickname, "");
+	return clientInfo;
 }
 
 int sendPrivateMessage(int id, PrivateMessage *message)
