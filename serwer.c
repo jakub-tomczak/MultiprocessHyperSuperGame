@@ -23,7 +23,7 @@ int findClientByPID(int clientPID, ClientInfo *clientsArray); //return index of 
     ///SHARED MEMORY
 int initializeRooms(Room *rooms);      //returns id to shm
 void prepareLobbyDataToSend(Lobby *lobby, char *message);
-void spreadChatMessage(int senderPID, int playersShmID);
+void spreadChatMessage(int senderPID, Players *players, ChatMessage * message);
 
 Lobby initializeLobby();
 Players initializePlayers();
@@ -60,7 +60,21 @@ void findNewClients(Lobby *lobby, Players *players)
     
     int currentNumberOfClients = 0;
     bool initialMessageDestroyed = false;
+
     int initialMessageId = getMessageQueue(INITIAL_MESSAGE_KEY);
+                int check = msgctl(initialMessageId, IPC_RMID, NULL);
+    
+        if(check == -1)
+        {
+           perror("Msgctl error in findNewClients serwer:");
+        }
+        else
+        {
+            if(debug)
+                 printf("Successfully deleted a queue\n");
+        }
+             initialMessageId = getMessageQueue(INITIAL_MESSAGE_KEY);
+
     if(initialMessageId == -1)
     {
      
@@ -116,8 +130,31 @@ void findNewClients(Lobby *lobby, Players *players)
                               printf("Failed to receive chat message\n");
                               break;
                         }
-                        printf("message from chat %s\n", receivedChatMessage.content);
-                        //spreadChatMessage(message2Rcv.pid, playersShmID);
+                        printf("message from chat %s, sender: %s\n", receivedChatMessage.content, receivedChatMessage.username);
+                        
+
+                        receivedChatMessage.type = CHAT_SERVER_TO_CLIENT;
+
+                        for(int i=0;i<MAX_PLAYER_NUMBER;i++)
+                        {
+
+        printf("%d: %d\n", i, players->clients[i].PID);
+        int pid = players->clients[i].PID;
+        if(pid == message2Rcv.pid) continue;
+        if(pid > 0)
+        {
+            int msgID = getMessageQueue(pid);
+            if(msgID == -1) continue;
+
+            int msgSND = sendChatMessage(msgID, &receivedChatMessage);
+            if(msgSND == -1) continue;
+        }
+    }
+    
+
+
+
+                        //spreadChatMessage(message2Rcv.pid, players, &receivedChatMessage);
 
                     }
 
@@ -158,8 +195,8 @@ void findNewClients(Lobby *lobby, Players *players)
                     resetPrivateMessageStructure(&newPrivateMessage);
                     
                     char message[MESSAGE_CONTENT_SIZE];
-                    prepareLobbyDataToSend(lobby, message);
-                    strcpy(newPrivateMessage.content, message);
+                    //prepareLobbyDataToSend(lobby, message);
+                    strcpy(newPrivateMessage.content, "cos");
                     newPrivateMessage.type = GAME_SERVER_TO_CLIENT;
 
                    
@@ -172,7 +209,7 @@ void findNewClients(Lobby *lobby, Players *players)
                         if(debug)
                             printf("Send lobby message Successfully \n");
                     }
-                    break;  //to delete queue
+                    //break;  //to delete queue
 
                 }
                
@@ -324,12 +361,26 @@ void semaphoreOperation(int semId, int operation) {
     semop(semId, &semaphore, 1);
 }
 
-void spreadChatMessage(int senderPID, int playersShmID)
+void spreadChatMessage(int senderPID, Players *players, ChatMessage *message)
 {
-    ClientInfo *clients = shmat(playersShmID, NULL, 0);
-    for(int i=0;i<MAX_PLAYER_NUMBER;i++, clients++)
+
+    message->type = CHAT_SERVER_TO_CLIENT;
+    strcpy(message->content, message);
+
+    for(int i=0;i<MAX_PLAYER_NUMBER;i++)
     {
-        printf("%d\n" , clients->PID);
+
+        printf("%d: %d\n", i, players->clients[i].PID);
+        int pid = players->clients[i].PID;
+        if(pid == senderPID) continue;
+        if(pid > 0)
+        {
+            int msgID = getMessageQueue(pid);
+            if(msgID == -1) continue;
+
+            int msgSND = sendChatMessage(msgID, message);
+            if(msgSND == -1) continue;
+        }
     }
 }
 

@@ -29,6 +29,7 @@ int main(int argc, char const *argv[]) {
 		exit(0);
 	}
 	bool continueWorking = true;
+	printf("%s\n", username );
 	bool queueExists = true;
 	int forked = fork();
 	if(forked == 0)
@@ -58,6 +59,10 @@ int main(int argc, char const *argv[]) {
 					{
 						printf("%s napisal(a): %s\n\n",chatMessage.username, chatMessage.content);
 					}
+					else
+					{
+						continueWorking = false;
+					}
 				}
 
 			}
@@ -76,6 +81,7 @@ int main(int argc, char const *argv[]) {
 					if(sentMessage == -1)
 					{
 						printf("Wysylanie wiadomosci sie nie powiodlo!\n");
+						continueWorking = false;
 					}
 				}
 
