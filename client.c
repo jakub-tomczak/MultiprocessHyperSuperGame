@@ -29,6 +29,7 @@ int main(int argc, char * argv[])
 	InitialMessage message2Snd;
 	message2Snd.type = GAME_CLIENT_TO_SERVER;
 	int myPID = getpid();
+	int room = -1;
 
 	int forked = fork();
 	if(forked == 0)
@@ -38,6 +39,7 @@ int main(int argc, char * argv[])
 		
 //		if(chatListenerFork == 0)
 //		{
+			if(debug)
 			execl("/usr/bin/gnome-terminal", "gnome-terminal" , "-x" ,"./chat.out", myPID_char, username,NULL);
 			perror("Failed to open chat window: ");
 /*
@@ -77,11 +79,6 @@ int main(int argc, char * argv[])
 		perror("Failed to send initial message to the server!");
 		exit(0);
 	}
-	else
-	{
-		printf("Sent a  %d\n", message2Snd.type);
-	}
-
 
 		if(privateMessageID == -1) 
 		{
@@ -103,7 +100,7 @@ int main(int argc, char * argv[])
 		{
 			printf("Server pid:%s\n", newPrivateMessage.content);
 		}
-		resetPrivateMessageStructure( &newPrivateMessage);
+		resetPrivateMessageStructure(&newPrivateMessage);
 		if(receivePrivateMessage(privateMessageID, &newPrivateMessage ,GAME_SERVER_TO_CLIENT) == -1)
 		{
 			perror("Blad podczas odbioru Wiadomosci z serwera! ");
@@ -111,8 +108,56 @@ int main(int argc, char * argv[])
 		}
 		else
 		{
-			printf("2Server pid:%s\n", newPrivateMessage.content);
+			printf("Wybierz pokoj:%s\n\n", newPrivateMessage.content);
 		}
+
+
+
+		int serversresponse = 0;
+		//do
+		//{
+			int roomIndex =2;
+			printf("Wybierz nr pokoju: ");
+			scanf("%d", &roomIndex);
+
+			
+			serversresponse = -1;
+			resetPrivateMessageStructure(&newPrivateMessage);
+			newPrivateMessage.type = GAME_CLIENT_TO_SERVER;
+			sprintf(newPrivateMessage.content, "%d", roomIndex);
+			printf("Seasdsad!\n");
+			if(sendPrivateMessage(privateMessageID, &newPrivateMessage) == -1)
+			{
+				printf("Failed to send information with room index to the server!\n");
+			}
+			if(debug)
+				printf("Send room choose message succesfully!\n");
+			
+			resetPrivateMessageStructure( &newPrivateMessage);
+			newPrivateMessage.type = GAME_SERVER_TO_CLIENT;
+			if(receivePrivateMessage(privateMessageID, &newPrivateMessage ,GAME_SERVER_TO_CLIENT) == -1)
+			{
+				perror("Blad podczas odbioru Wiadomosci z serwera! ");
+				exit(0);
+			}
+			else
+			{
+				if (isdigit(newPrivateMessage.content[0])) {
+					serversresponse = atoi(newPrivateMessage.content[0]);
+					room = roomIndex;
+					printf("Dodano do pokoju nr %d\n", room);
+				}
+				else
+				{
+					printf("Nie zostales dodany do pokoju! \n");
+					serversresponse = -1;
+				}
+			}
+			
+		//}while(serversresponse == -1);
+		
+		//wait for a move
+
 
 	}
 
