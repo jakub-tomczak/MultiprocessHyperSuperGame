@@ -12,6 +12,7 @@
 #include <errno.h>	//errno
 #include "structures.h"
 #include <stdbool.h>
+#include <ctype.h>
 
 int initializeChat(int parentPID);
 
@@ -114,9 +115,9 @@ int main(int argc, char * argv[])
 
 
 		int serversresponse = 0;
-		//do
-		//{
-			int roomIndex =2;
+		do
+		{
+			int roomIndex = -1;
 			printf("Wybierz nr pokoju: ");
 			scanf("%d", &roomIndex);
 
@@ -125,16 +126,20 @@ int main(int argc, char * argv[])
 			resetPrivateMessageStructure(&newPrivateMessage);
 			newPrivateMessage.type = GAME_CLIENT_TO_SERVER;
 			sprintf(newPrivateMessage.content, "%d", roomIndex);
-			printf("Seasdsad!\n");
+
+//			msgsnd(privateMessageID, &newPrivateMessage, sizeof(newPrivateMessage) - sizeof(newPrivateMessage.type),0);
+
 			if(sendPrivateMessage(privateMessageID, &newPrivateMessage) == -1)
 			{
 				printf("Failed to send information with room index to the server!\n");
 			}
 			if(debug)
 				printf("Send room choose message succesfully!\n");
-			
+		
+
 			resetPrivateMessageStructure( &newPrivateMessage);
 			newPrivateMessage.type = GAME_SERVER_TO_CLIENT;
+			                            printf("reset content %s\n", newPrivateMessage.content );
 			if(receivePrivateMessage(privateMessageID, &newPrivateMessage ,GAME_SERVER_TO_CLIENT) == -1)
 			{
 				perror("Blad podczas odbioru Wiadomosci z serwera! ");
@@ -142,8 +147,9 @@ int main(int argc, char * argv[])
 			}
 			else
 			{
+				printf("Odebrane dane: %s\n", newPrivateMessage.content);
 				if (isdigit(newPrivateMessage.content[0])) {
-					serversresponse = atoi(newPrivateMessage.content[0]);
+					serversresponse = atoi(newPrivateMessage.content);
 					room = roomIndex;
 					printf("Dodano do pokoju nr %d\n", room);
 				}
@@ -154,7 +160,7 @@ int main(int argc, char * argv[])
 				}
 			}
 			
-		//}while(serversresponse == -1);
+		}while(serversresponse == -1);
 		
 		//wait for a move
 

@@ -140,7 +140,8 @@ void resetInitialMessageStructure(InitialMessage *messageToReset)
 void resetPrivateMessageStructure(PrivateMessage *privateMessageToReset)
 {
 	privateMessageToReset->type = 0;
-	memset(privateMessageToReset->content, "0",  MESSAGE_CONTENT_SIZE);
+	//memset(privateMessageToReset->content, "0",  MESSAGE_CONTENT_SIZE);
+	strcpy(privateMessageToReset->content, "0");
 
 }
 
@@ -165,8 +166,17 @@ ClientInfo getEmptyClientInfo()
 
 int sendPrivateMessage(int id, PrivateMessage *message)
 {
+	printf("message %s, size %d\n", message->content, sizeof(*message) - sizeof(message->type) );
 	if(msgsnd(id, message, sizeof(*message) - sizeof(message->type), 0) == -1)
 	{
+		 if(errno == EINVAL)
+        {
+        	printf(" EINVAL\n");
+        }
+        else
+        {
+        	printf("not EINVAL\n");
+        }
 		if(debug)
 			perror("Failed to send private message!");
 		return -1;

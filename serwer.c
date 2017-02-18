@@ -216,61 +216,58 @@ void findNewClients(Lobby *lobby, Players *players, GameMatrix *gameMatrix)
                         if(debug)
                             printf("Send lobby message Successfully \n");
                     }
-
+                    printf("message id %d\n", privateMessageID);
                     resetPrivateMessageStructure(&newPrivateMessage);
                     newPrivateMessage.type = GAME_CLIENT_TO_SERVER;
                     
                     int roomResponse = -1;
                     int roomJoining = -1;
-                    //do
-                    //{
+                    do
+                    {
 
                         roomResponse = -1;
                         int temp;
                         if(receivePrivateMessage(privateMessageID, &newPrivateMessage ,GAME_CLIENT_TO_SERVER) != -1)
                         {
                             temp = atoi(newPrivateMessage.content);
-                            printf("%s\n", "ok" );
                             roomResponse = canJoinRoom(lobby, temp);
-                            roomResponse = 1;
                         }
                         else
                         {
                             perror("receiving room info failure");
                         }
-                        
-                        if(roomResponse == 1)
+
+                        newPrivateMessage.type = GAME_SERVER_TO_CLIENT;
+                        switch(roomResponse)
                         {
-                                //int a = addClientToRoom(lobby, players, client.PID, temp);
-                                int a = 2;
-                                printf("\roomResponse - %d", a);
-                                resetPrivateMessageStructure(&newPrivateMessage);
-                                newPrivateMessage.type = GAME_SERVER_TO_CLIENT;
-                                sprintf(newPrivateMessage.content, "%d", &a);
-                                //strcpy(newPrivateMessage.content, '2');
-                                if(sendPrivateMessage(privateMessageID, &newPrivateMessage) == -1)
+                            case 1: //choosen room is correct
+                                
+                                
+                                if(addClientToRoom(lobby, players, client.PID, temp) <0)
                                 {
-                                    printf("Failed to send message with room response!\n");
-
+                                    roomResponse = -1;
+                                    strcpy(newPrivateMessage.content, "x");
                                 }
-                                roomJoining = temp;
+                                else
+                                {
+                                    roomJoining = roomResponse;                                    
+                                }
+                                break;
+                            case 0: //room is in game
+                                strcpy(newPrivateMessage.content,"x");
+                                break;
 
+                            case -1: //room number is invaild
+                                strcpy(newPrivateMessage.content,"x");
+                                break;
                         }
-                        else    //cant join the room
+                        if(sendPrivateMessage(privateMessageID, &newPrivateMessage) == -1)
                         {
-                                resetPrivateMessageStructure(&newPrivateMessage);
-                                newPrivateMessage.type = GAME_SERVER_TO_CLIENT;
-                                //strcpy(newPrivateMessage.content, '0');
-                                sprintf(newPrivateMessage.content, "%d", 0);
-                                if(sendPrivateMessage(privateMessageID, &newPrivateMessage) == -1)
-                                {
-                                    printf("Failed to send message with room response!\n");
-
-                                }
+                            printf("Failed to send message\n" );
                         }
-                            
+                      
                         
-                    //}while(roomResponse == 0 || roomResponse == -1);
+                    }while(roomResponse == 0 || roomResponse == -1);
                     /*
                     if(lobby->rooms[roomJoining].state == ROOM_IN_GAME)
                     {
@@ -324,20 +321,24 @@ void addNewClient(InitialMessage *newClient, Players *players, int *clientsArray
 
 int addClientToRoom(Lobby *lobby, Players *players, int clientIndex, int roomIndex)
 {
-    //int playerIndex = findClientByPID(client->PID, players);
+    int playerIndex = findClientByPID(clientIndex, players);
    // if(playerIndex == -1) return -1;
-    enterPlayersOperation(players);
-    enterLobbyMemory(lobby);
-    int playerIndex = clientIndex;
+    
+    //semaphores
+    //enterPlayersOperation(players);
+    //enterLobbyMemory(lobby);
+   //    int playerIndex = clientIndex;
     int returnValue = -1;
+    printf("one %d\n", roomIndex);
+    printf("two %d, %d\n",lobby->rooms[roomIndex].state, players->clients[playerIndex] );
     if(lobby->rooms[roomIndex].state == ROOM_EMPTY)
     {
-        lobby->rooms[roomIndex].players[0] = players->clients[clientIndex];
+        lobby->rooms[roomIndex].players[0] = players->clients[playerIndex];
         lobby->rooms[roomIndex].state = ROOM_PLAYER_AWAITING;
         returnValue = 1;
     }else if(lobby->rooms[roomIndex].state == ROOM_PLAYER_AWAITING)
     {
-        lobby->rooms[roomIndex].players[1] = players->clients[clientIndex];
+        lobby->rooms[roomIndex].players[1] = players->clients[playerIndex];
         lobby->rooms[roomIndex].state = ROOM_IN_GAME;
         returnValue = 2;
     }
@@ -346,8 +347,8 @@ int addClientToRoom(Lobby *lobby, Players *players, int clientIndex, int roomInd
         players->clients[playerIndex].roomIndex = roomIndex;
     printf("Added player %s to the room %d\n", players->clients[playerIndex].nickname, players->clients[playerIndex].roomIndex);
     }
-    leaveLobbyMemory(lobby);
-    leavePlayersOperation(players);
+  //  leaveLobbyMemory(lobby);
+  //  leavePlayersOperation(players);
     return returnValue;
 }
 
@@ -369,6 +370,7 @@ int findClientByPID(int clientPID, Players *clientsArray)
 
 int canJoinRoom(Lobby *lobby, int roomIndex)
 {
+    if(roomIndex == -1) return -1;
     switch(lobby->rooms[roomIndex].state)
     {
         case ROOM_EMPTY:
