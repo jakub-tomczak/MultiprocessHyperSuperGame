@@ -107,8 +107,11 @@ void findNewClients(Lobby *lobby, Players *players, GameMatrix *gameMatrix)
         else
         {
             //new client hass been found!
-
-            addNewClient(&message2Rcv, players, &currentNumberOfClients);
+            int newClientFork = fork();
+            if(newClientFork == 0)
+            {
+                //begin new client found section
+                addNewClient(&message2Rcv, players, &currentNumberOfClients);
 
 
                 ClientInfo client;
@@ -280,6 +283,18 @@ void findNewClients(Lobby *lobby, Players *players, GameMatrix *gameMatrix)
                     
                     
                 }
+
+
+
+
+                //end new client found section
+
+            }
+            else
+            {
+                //go and look for next client
+            }
+
                
 
         }
@@ -329,9 +344,10 @@ int addClientToRoom(Lobby *lobby, Players *players, int clientIndex, int roomInd
     printf("Waiting for an access\n");
     displayPlayers(players);
     //semaphores
-    //enterPlayersOperation(players);
-    //enterLobbyMemory(lobby);
-    //sleep(10);
+   // enterPlayersOperation(players);
+    enterLobbyMemory(lobby);
+    printf("Entered critical section\n");
+    sleep(20);
     int returnValue = -1;
     if(lobby->rooms[roomIndex].state == ROOM_EMPTY)
     {
@@ -349,8 +365,8 @@ int addClientToRoom(Lobby *lobby, Players *players, int clientIndex, int roomInd
         players->clients[playerIndex].roomIndex = roomIndex;
     printf("Added player %s to the room %d\n", players->clients[playerIndex].nickname, players->clients[playerIndex].roomIndex);
     }
-    //leaveLobbyMemory(lobby);
-    //leavePlayersOperation(players);
+    leaveLobbyMemory(lobby);
+   // leavePlayersOperation(players);
     printf("Exited\n");
     return returnValue;
 }
@@ -621,5 +637,5 @@ GameMatrix initializeGameMatrix()
         printf("Failed to allocate semaphore memory for game matrix\n");
     gameMatrix.matrix[0] = shmat(gameMatrix.memID, NULL, 0);
 
-    semctl(gameMatrix.semID, 0, SETVAL, 1);
+    semctl(gameMatrix.semID, 0, SETVAL, 2);
 }

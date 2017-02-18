@@ -41,7 +41,7 @@ int main(int argc, char * argv[])
 		
 //		if(chatListenerFork == 0)
 //		{
-			execl("/usr/bin/gnome-terminal", "gnome-terminal" , "-x" ,"./chat.out", myPID_char, username,NULL);
+			//execl("/usr/bin/gnome-terminal", "gnome-terminal" , "-x" ,"./chat.out", myPID_char, username,NULL);
 			perror("Failed to open chat window: ");
 /*
 		}
