@@ -322,12 +322,14 @@ void addNewClient(InitialMessage *newClient, Players *players, int *clientsArray
 int addClientToRoom(Lobby *lobby, Players *players, int clientIndex, int roomIndex)
 {
     int playerIndex = findClientByPID(clientIndex, players);
+    if(playerIndex  < 0) return -1;
    // if(playerIndex == -1) return -1;
-    
+    //trzeba wyswietlic klientow
+    printf("Waiting for an access\n");
     //semaphores
     //enterPlayersOperation(players);
     //enterLobbyMemory(lobby);
-   //    int playerIndex = clientIndex;
+    sleep(10);
     int returnValue = -1;
     printf("one %d\n", roomIndex);
     printf("two %d, %d\n",lobby->rooms[roomIndex].state, players->clients[playerIndex] );
@@ -347,8 +349,9 @@ int addClientToRoom(Lobby *lobby, Players *players, int clientIndex, int roomInd
         players->clients[playerIndex].roomIndex = roomIndex;
     printf("Added player %s to the room %d\n", players->clients[playerIndex].nickname, players->clients[playerIndex].roomIndex);
     }
-  //  leaveLobbyMemory(lobby);
-  //  leavePlayersOperation(players);
+    //leaveLobbyMemory(lobby);
+    //leavePlayersOperation(players);
+    printf("Exited\n");
     return returnValue;
 }
 

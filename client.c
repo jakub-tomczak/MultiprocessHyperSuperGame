@@ -61,7 +61,7 @@ int main(int argc, char * argv[])
 	{
 		int privateMessageID = getMessageQueue(myPID);
 
-		sprintf(message2Snd.username, "%d", myPID);
+		strcpy(message2Snd.username,username);
 		message2Snd.pid = myPID;
 		message2Snd.type = GAME_CLIENT_TO_SERVER;
 
@@ -109,7 +109,7 @@ int main(int argc, char * argv[])
 		}
 		else
 		{
-			printf("Wybierz pokoj:%s\n\n", newPrivateMessage.content);
+			printf("Wybierz pokoj:\n%s\n", newPrivateMessage.content);
 		}
 
 
@@ -162,9 +162,20 @@ int main(int argc, char * argv[])
 			
 		}while(serversresponse == -1);
 		
+		/*
 		//wait for a move
+		PrivateMessage gameMessage;
+		resetPrivateMessageStructure(&gameMessage);
+		gameMessage.type = GAME_CLIENT_TO_SERVER;
 
+		int gameState;
+		do
+		{
+			if(receivePrivateMessage(privateMessageID, &gameMessage) == -1)
+				break;
 
+		} while(gameState > -1);
+*/
 	}
 
 
