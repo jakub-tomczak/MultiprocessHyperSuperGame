@@ -18,11 +18,11 @@
 int initializeMessageQueue(int key);
 
 int main(int argc, char const *argv[]) {
+	printf("my pid = %d\n", getpid());
 	int parentPid = atoi(argv[1]);
 	char username[USER_NAME_LENGTH];
 	strcpy(username,argv[2]);
 	int messageID = initializeMessageQueue(parentPid);
-
 	if(messageID == -1)
 	{
 		printf("Could not connect with the server, exiting...\n" );
@@ -61,6 +61,18 @@ int main(int argc, char const *argv[]) {
 					}
 					else
 					{
+						printf("Odbieranie wiadomosci sie nie powiodlo\n");
+						if(msgctl(messageID, IPC_RMID, NULL) == -1)
+						{
+							if(debug)
+							{
+								perror("Error while deleting chat message queue");
+							}
+						}
+						else
+						{
+							queueExists = false;
+						}
 						continueWorking = false;
 					}
 				}
@@ -81,6 +93,18 @@ int main(int argc, char const *argv[]) {
 					if(sentMessage == -1)
 					{
 						printf("Wysylanie wiadomosci sie nie powiodlo!\n");
+
+						if(msgctl(messageID, IPC_RMID, NULL) == -1)
+						{
+							if(debug)
+							{
+								perror("Error while deleting chat message queue");
+							}
+						}
+						else
+						{
+							queueExists = false;
+						}
 						continueWorking = false;
 					}
 				}

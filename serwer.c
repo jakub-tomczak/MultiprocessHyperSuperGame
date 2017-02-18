@@ -268,15 +268,16 @@ void findNewClients(Lobby *lobby, Players *players, GameMatrix *gameMatrix)
                       
                         
                     }while(roomResponse == 0 || roomResponse == -1);
-                    /*
+                    
                     if(lobby->rooms[roomJoining].state == ROOM_IN_GAME)
                     {
                         if(fork() == 0)
                         {
+                            printf("Starting game in room %d\n", roomJoining);
                             manageGame(lobby, players, roomJoining);
                         }
                     }
-                    */
+                    
                     
                 }
                
@@ -326,13 +327,12 @@ int addClientToRoom(Lobby *lobby, Players *players, int clientIndex, int roomInd
    // if(playerIndex == -1) return -1;
     //trzeba wyswietlic klientow
     printf("Waiting for an access\n");
+    displayPlayers(players);
     //semaphores
     //enterPlayersOperation(players);
     //enterLobbyMemory(lobby);
-    sleep(10);
+    //sleep(10);
     int returnValue = -1;
-    printf("one %d\n", roomIndex);
-    printf("two %d, %d\n",lobby->rooms[roomIndex].state, players->clients[playerIndex] );
     if(lobby->rooms[roomIndex].state == ROOM_EMPTY)
     {
         lobby->rooms[roomIndex].players[0] = players->clients[playerIndex];
@@ -358,14 +358,17 @@ int addClientToRoom(Lobby *lobby, Players *players, int clientIndex, int roomInd
 int findClientByPID(int clientPID, Players *clientsArray)
 {
     enterPlayersOperation(clientsArray);
-    for(int indx = 0 ; indx < MAX_PLAYER_NUMBER; ++indx)
+    ClientInfo *client = clientsArray->clients;
+    for(int indx = 0 ; indx < MAX_PLAYER_NUMBER; ++indx, client++)
     {
-       if(clientsArray->clients[indx].PID == clientPID)
+       if(client->PID == clientPID)
        {
+            printf("Found at %d\n", indx);
             leavePlayersOperation(clientsArray);
             return indx;
        }
     }
+    printf("Not found\n");
 
     leavePlayersOperation(clientsArray);
     return -1;
@@ -403,6 +406,19 @@ int initializeRooms(Room *rooms)
     return roomShmID;
 }     //returns id to shm
 
+void displayPlayers(Players *playersArray)
+{
+    printf("%5s\n", "-");
+    ClientInfo *player = playersArray->clients;
+    for(int i=0;i<MAX_PLAYER_NUMBER;i++, player++)
+    {
+        if(player->PID == -1) 
+            printf("%d) <none>\n", i);
+        else
+            printf("%d) Player %s, pid: %d\n", i, player->nickname, player->PID);
+    }
+    printf("%5s\n", "-");
+}
 
 
 
@@ -493,16 +509,41 @@ void manageGame(Lobby *lobby, Players * players,int roomJoining)
 {
     printf("Players in a new game: %s, %s, in the room no %d\n", 
         lobby->rooms[roomJoining].players[0].nickname,
-         lobby->rooms[roomJoining].players[0].nickname,
+         lobby->rooms[roomJoining].players[1].nickname,
          roomJoining); 
     bool gameNotFinished = true;
-    while(gameNotFinished)
+    int firstPID = lobby->rooms[roomJoining].players[0].PID;
+    int secondPID = lobby->rooms[roomJoining].players[1].PID;
+
+    GameMatrix gameMatrix;
+    //semaphore
+    gameMatrix.semID = semget(roomJoining + 50, 1, IPC_CREAT | DEFAULT_RIGHTS);
+    semctl(gameMatrix.semID, 0, SETVAL, 1);
+
+    //shared memory
+    int shmID = shmget(roomJoining + 50, GAME_MATRIX_CELLS, IPC_CREAT | DEFAULT_RIGHTS );
+    gameMatrix.memID = shmID;
+    gameMatrix.matrix[0] = shmat(gameMatrix.memID, 0, 0);
+
+    //private queues ids
+    int firstQueueID = msgget(firstPID, DEFAULT_RIGHTS);
+    int secondQueueID = msgget(secondPID, DEFAULT_RIGHTS);
+
+
+    PrivateMessage gameMessage;
+    resetPrivateMessageStructure(&gameMessage);
+    gameMessage.type = GAME_SERVER_TO_CLIENT;
+    strcpy(gameMessage.content, "2");
+    sendPrivateMessage(firstQueueID, &gameMessage);
+    strcpy(gameMessage.content, "0");
+    sendPrivateMessage(secondQueueID, &gameMessage);
+    /*while(gameNotFinished)
     {   
         PrivateMessage privateMessage;
         resetPrivateMessageStructure(&privateMessage);
 
         //sendPrivateMessage();
-    }
+    }*/
 
 }
 
