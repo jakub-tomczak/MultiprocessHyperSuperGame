@@ -29,6 +29,8 @@ Lobby initializeLobby();
 Players initializePlayers();
 GameMatrix initializeGameMatrix();
 int canJoinRoom(Lobby *lobby, int roomIndex);
+int checkMove(GameMatrix *gameMatrix, int moveToCheck);
+
 
     ///SEMAPHORES
 int roomLock();             //group of sem to rooms
@@ -544,12 +546,12 @@ void manageGame(Lobby *lobby, Players * players,int roomJoining)
     int shmID = shmget(gameKey, GAME_MATRIX_CELLS, IPC_CREAT | DEFAULT_RIGHTS );
     gameMatrix.memID = shmID;
     gameMatrix.board = shmat(gameMatrix.memID, 0, 0);
-    printf("shm id = %d\n", gameMatrix.memID);
+    //printf("shm id = %d\n", gameMatrix.memID);
 
     semaphoreOperation(gameMatrix.semID, SEM_P);
 
     char tempMatrix[GAME_MATRIX_CELLS];
-    memset(tempMatrix, (char)32, GAME_MATRIX_CELLS);
+    memset(tempMatrix, (char)GAME_EMPTY_CELL_ASCII, GAME_MATRIX_CELLS);
     strcpy(gameMatrix.board, tempMatrix);
    
     semaphoreOperation(gameMatrix.semID, SEM_V);
@@ -557,7 +559,6 @@ void manageGame(Lobby *lobby, Players * players,int roomJoining)
     //private queues ids
     int firstQueueID = msgget(firstPID, DEFAULT_RIGHTS);
     int secondQueueID = msgget(secondPID, DEFAULT_RIGHTS);
-    printf("Sending first messages\n");
 
     PrivateMessage gameMessage;
     gameMessage.type = GAME_SERVER_TO_CLIENT;
@@ -565,7 +566,6 @@ void manageGame(Lobby *lobby, Players * players,int roomJoining)
     sendPrivateMessage(firstQueueID, &gameMessage);
 
     int turnPlayer = firstQueueID;
-    perror("cos nie wyszlo podczas wysylania");
 
     printf("Starting new game %s, waiting for id %d\n", gameMessage.content, turnPlayer);
     while(gameNotFinished)
@@ -584,18 +584,32 @@ void manageGame(Lobby *lobby, Players * players,int roomJoining)
                         break;
         }
       
-//        perror("cos");
-  //      printf("a %d, type: %d, exact message :>%s<\n", a, gameMessage.type, gameMessage.content);
-    //    printf("Message from player after choosing column numer: %s\n", gameMessage.content);
         gameMessage.type = GAME_SERVER_TO_CLIENT;
-        printf("message %s\n", gameMessage.content);
+        //printf("message %s\n", gameMessage.content);
         if(isdigit(gameMessage.content[0]))
         {
             int choosenColumn = atoi(gameMessage.content);
-            printf("Ruch jest ok!");
+            int responseToPlayer = -1;
+            int row = checkMove(&gameMatrix, choosenColumn);
+            if(row > -1)    
+            {
+                responseToPlayer = 1;
+                printf("First free row: %d\n", row);
+            }
+            else //no place in that column
+            {
+                printf("nie\n");
+                responseToPlayer = 0;
+            }
 
-            strcpy(gameMessage.content, "1");   //accepted
+            sprintf(gameMessage.content, "%d", responseToPlayer);
+            //strcpy(gameMessage.content, "1");   //accepted
             sendPrivateMessage(turnPlayer, &gameMessage);
+            
+            if(responseToPlayer == 0)
+            {
+                continue; //don't change player, wait for the message from the current player again 
+            }
             //change player
             if(turnPlayer == firstQueueID)
                 turnPlayer = secondQueueID;
@@ -635,6 +649,43 @@ void spreadChatMessage(int senderPID, Players *players, ChatMessage *message)
             if(msgSND == -1) continue;
         }
     }
+}
+int checkMove(GameMatrix *gameMatrix, int moveToCheck)
+{
+    if(moveToCheck < 1 || moveToCheck > 5) 
+        return false;
+
+    printf("Start searching free row in column %d\n move %d, cells %d\n", moveToCheck, moveToCheck-1, GAME_MATRIX_CELLS);
+    int count = 0, row = 0;
+    char temp[GAME_MATRIX_CELLS];
+    strcpy(temp[0], gameMatrix->board);
+    for(int i=moveToCheck-1;i<GAME_MATRIX_CELLS;i+=GAME_MATRIX_SIZE)
+    {
+        if(temp[i] != (char)GAME_EMPTY_CELL_ASCII)
+        {
+            printf("empty cell!\n");
+            count++;
+        }
+    }
+    /*
+    char *ptr = gameMatrix->board;
+    for(int i=moveToCheck-1;i<GAME_MATRIX_CELLS;i+=GAME_MATRIX_SIZE, ptr+=GAME_MATRIX_SIZE*sizeof(char))
+    {
+        //gameMatrix->board[i]
+        printf("Row: %d, char %s\n",row, *ptr);
+        if(*ptr != (char)GAME_EMPTY_CELL_ASCII)
+            {
+                printf("Count ++\n");
+                count++;    //if non empty cell is found
+            }
+    }
+    */
+
+    if(count == GAME_MATRIX_SIZE)
+        return -1;
+    printf("Count %d, %d", count, GAME_MATRIX_SIZE-count);
+    return GAME_MATRIX_SIZE-count;  //for went from the top of the board
+
 }
 
 
