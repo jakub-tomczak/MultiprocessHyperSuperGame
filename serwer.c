@@ -139,7 +139,7 @@ void findNewClients(Lobby *lobby, Players *players, GameMatrix *gameMatrix)
                               printf("Failed to receive chat message\n");
                               break;
                         }
-                        printf("message from chat %s, sender: %s\n", receivedChatMessage.content, receivedChatMessage.username);
+                       // printf("message from chat %s, sender: %s\n", receivedChatMessage.content, receivedChatMessage.username);
                         
                         receivedChatMessage.type = CHAT_SERVER_TO_CLIENT;
 
@@ -168,7 +168,7 @@ void findNewClients(Lobby *lobby, Players *players, GameMatrix *gameMatrix)
 
 
                 }else{
-                     printf("Client's private message id: %d, clitns pid %d\n", privateMessageID, message2Rcv.pid);
+                  //   printf("Client's private message id: %d, clitns pid %d\n", privateMessageID, message2Rcv.pid);
                     if(privateMessageID == -1)
                     {
                          printf("Couldn't launch message queue for client with PID: %d, exiting...\n", message2Rcv.pid);
@@ -333,7 +333,7 @@ void addNewClient(InitialMessage *newClient, Players *players, int *clientsArray
     printf("\nTotal number of clients = %d, pid %d", (*clientsArrayIndex), getpid());
     currentNumberOfClients_GLOBAL = *clientsArrayIndex;
     //leavePlayersOperation(players);
-    displayPlayers(players);
+   // displayPlayers(players);
 }
 
 int addClientToRoom(Lobby *lobby, Players *players, int clientIndex, int roomIndex)
@@ -343,7 +343,7 @@ int addClientToRoom(Lobby *lobby, Players *players, int clientIndex, int roomInd
    // if(playerIndex == -1) return -1;
     //trzeba wyswietlic klientow
     printf("Waiting for an access\n");
-    displayPlayers(players);
+   // displayPlayers(players);
     //semaphores
    // enterPlayersOperation(players);
     enterLobbyMemory(lobby);
@@ -524,43 +524,93 @@ void semaphoreOperation(int semId, int operation) {
 
 void manageGame(Lobby *lobby, Players * players,int roomJoining)
 {
-    printf("Players in a new game: %s, %s, in the room no %d\n", 
+    int gameKey = roomJoining + 50;
+
+    printf("Players in a new game: %s, %s, in the room no %d, game shm, sem key = %d\n", 
         lobby->rooms[roomJoining].players[0].nickname,
          lobby->rooms[roomJoining].players[1].nickname,
-         roomJoining); 
+         roomJoining,
+         gameKey); 
     bool gameNotFinished = true;
     int firstPID = lobby->rooms[roomJoining].players[0].PID;
     int secondPID = lobby->rooms[roomJoining].players[1].PID;
 
     GameMatrix gameMatrix;
     //semaphore
-    gameMatrix.semID = semget(roomJoining + 50, 1, IPC_CREAT | DEFAULT_RIGHTS);
+    gameMatrix.semID = semget(gameKey, 1, IPC_CREAT | DEFAULT_RIGHTS);
     semctl(gameMatrix.semID, 0, SETVAL, 1);
 
     //shared memory
-    int shmID = shmget(roomJoining + 50, GAME_MATRIX_CELLS, IPC_CREAT | DEFAULT_RIGHTS );
+    int shmID = shmget(gameKey, GAME_MATRIX_CELLS, IPC_CREAT | DEFAULT_RIGHTS );
     gameMatrix.memID = shmID;
-    gameMatrix.matrix[0] = shmat(gameMatrix.memID, 0, 0);
+    gameMatrix.board = shmat(gameMatrix.memID, 0, 0);
+    printf("shm id = %d\n", gameMatrix.memID);
+
+    semaphoreOperation(gameMatrix.semID, SEM_P);
+
+    char tempMatrix[GAME_MATRIX_CELLS];
+    memset(tempMatrix, (char)32, GAME_MATRIX_CELLS);
+    strcpy(gameMatrix.board, tempMatrix);
+   
+    semaphoreOperation(gameMatrix.semID, SEM_V);
 
     //private queues ids
     int firstQueueID = msgget(firstPID, DEFAULT_RIGHTS);
     int secondQueueID = msgget(secondPID, DEFAULT_RIGHTS);
-
+    printf("Sending first messages\n");
 
     PrivateMessage gameMessage;
-    resetPrivateMessageStructure(&gameMessage);
     gameMessage.type = GAME_SERVER_TO_CLIENT;
     strcpy(gameMessage.content, "2");
     sendPrivateMessage(firstQueueID, &gameMessage);
-    strcpy(gameMessage.content, "0");
-    sendPrivateMessage(secondQueueID, &gameMessage);
-    /*while(gameNotFinished)
-    {   
-        PrivateMessage privateMessage;
-        resetPrivateMessageStructure(&privateMessage);
 
-        //sendPrivateMessage();
-    }*/
+    int turnPlayer = firstQueueID;
+    perror("cos nie wyszlo podczas wysylania");
+
+    printf("Starting new game %s, waiting for id %d\n", gameMessage.content, turnPlayer);
+    while(gameNotFinished)
+    {   
+
+        resetPrivateMessageStructure(&gameMessage);
+        gameMessage.type = GAME_CLIENT_TO_SERVER;
+
+       // int a = msgrcv(turnPlayer, &gameMessage, sizeof(gameMessage)-sizeof(gameMessage.type), GAME_CLIENT_TO_SERVER, 0);
+        if(receivePrivateMessage(turnPlayer, &gameMessage, GAME_CLIENT_TO_SERVER) == -1)
+        {
+                        printf("Connection broken!\n");
+                        msgctl(turnPlayer, IPC_RMID, NULL);
+                        semctl(gameMatrix.semID, 0, IPC_RMID, NULL);
+                        shmctl(gameMatrix.memID, IPC_RMID, NULL);
+                        break;
+        }
+      
+//        perror("cos");
+  //      printf("a %d, type: %d, exact message :>%s<\n", a, gameMessage.type, gameMessage.content);
+    //    printf("Message from player after choosing column numer: %s\n", gameMessage.content);
+        gameMessage.type = GAME_SERVER_TO_CLIENT;
+        printf("message %s\n", gameMessage.content);
+        if(isdigit(gameMessage.content[0]))
+        {
+            int choosenColumn = atoi(gameMessage.content);
+            printf("Ruch jest ok!");
+
+            strcpy(gameMessage.content, "1");   //accepted
+            sendPrivateMessage(turnPlayer, &gameMessage);
+            //change player
+            if(turnPlayer == firstQueueID)
+                turnPlayer = secondQueueID;
+            else
+                turnPlayer = firstQueueID;
+            strcpy(gameMessage.content, "2");   //tell another player that is its turn
+            sendPrivateMessage(turnPlayer, &gameMessage);   
+        }
+        else
+        {
+            strcpy(gameMessage.content, "0");
+            sendPrivateMessage(turnPlayer, &gameMessage);
+            //ponow ruch - nie zmieniaj gracza
+        }
+    }
 
 }
 
@@ -636,7 +686,7 @@ GameMatrix initializeGameMatrix()
         printf("Failed to allocate shared memory for game matrix\n");
     if(gameMatrix.semID == -1)
         printf("Failed to allocate semaphore memory for game matrix\n");
-    gameMatrix.matrix[0] = shmat(gameMatrix.memID, NULL, 0);
+    gameMatrix.board = shmat(gameMatrix.memID, NULL, 0);
 
     semctl(gameMatrix.semID, 0, SETVAL, 2);
 }

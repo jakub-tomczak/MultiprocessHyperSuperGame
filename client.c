@@ -15,8 +15,10 @@
 #include "structures.h"
 
 int initializeChat(int parentPID);
-
+void displayGameboard(GameMatrix *gameboard);
+void semaphoreOperation(int semId, int operation);
 bool serverAvailable = true;
+struct sembuf semaphore;
 
 int main(int argc, char * argv[])
 {
@@ -159,11 +161,12 @@ int main(int argc, char * argv[])
 				}
 				else
 				{
-					printf("Odebrane dane: %s\n", newPrivateMessage.content);
+					//printf("Odebrane dane: %s\n", newPrivateMessage.content);
 					if (isdigit(newPrivateMessage.content[0])) {
 						serversresponse = atoi(newPrivateMessage.content);
 						room = roomIndex;
-						printf("Dodano do pokoju nr %d\n", room);
+						printf("Dodano do pokoju nr %d, serversresponse: %d\n", room);
+						break;
 					}
 					else
 					{
@@ -171,7 +174,6 @@ int main(int argc, char * argv[])
 						serversresponse = -1;
 					}
 				}
-				
 			}while(serversresponse == -1);
 			
 			if(room == -1) 
@@ -179,16 +181,15 @@ int main(int argc, char * argv[])
 					exit(0);
 				}
 
-			//connecting to shared memory with gameMatrix
-			
+			int gameKey = room +50;
+
 			GameMatrix gameMatrix;
 			//set semaphore
-    		gameMatrix.semID = semget(room + 50, 1, IPC_CREAT | DEFAULT_RIGHTS);
+    		gameMatrix.semID = semget(gameKey, 1, IPC_CREAT | DEFAULT_RIGHTS);
     		semctl(gameMatrix.semID,0, SETVAL, 1);
     		//set shared memory
-    		gameMatrix.memID = shmget(room + 50, GAME_MATRIX_CELLS, IPC_CREAT | DEFAULT_RIGHTS);
-    		gameMatrix.matrix[0] = shmat(gameMatrix.memID, 0, 0);
-
+    		gameMatrix.memID = shmget(gameKey, GAME_MATRIX_CELLS, IPC_CREAT | DEFAULT_RIGHTS);
+    		gameMatrix.board = shmat(gameMatrix.memID, 0, 0);
 			//wait for a move
 			PrivateMessage gameMessage;
 			resetPrivateMessageStructure(&gameMessage);
@@ -197,27 +198,51 @@ int main(int argc, char * argv[])
 			int gameState = 1;
 			do
 			{
+				printf("Oczekiwanie na rozpoczęcie gry\n ", privateMessageID);
 				if(receivePrivateMessage(privateMessageID, &gameMessage,GAME_SERVER_TO_CLIENT) == -1)
-					break;
+					{
+						printf("Connection broken!\n");
+						msgctl(privateMessageID, IPC_RMID, NULL);
+						semctl(gameMatrix.semID, 0, IPC_RMID, NULL);
+						shmctl(gameMatrix.memID, IPC_RMID, NULL);
+						gameState = -1;
+						break;
+					}
+				//printf("received private message >%s<\n", gameMessage.content);
 				gameMessage.type = GAME_CLIENT_TO_SERVER;
 
 				if(isdigit(gameMessage.content[0]))
 				{
 					int gameResponse = atoi(gameMessage.content);
+					//printf("response after atoi>%d<\n", gameResponse);
 					switch(gameResponse)
 					{
 						case 0:
-							printf("Ponow ruch\n");
+						case 2:
+							if(gameResponse == 0)
+								printf("Ponow ruch\n");
+							else
+								printf("Twój ruch\n");
+							displayGameboard(&gameMatrix);
+							scanf("%s", gameMessage.content);
+							sendPrivateMessage(privateMessageID, &gameMessage);
+							gameMessage.type = GAME_SERVER_TO_CLIENT;
 							break;
 						case 1:
 							printf("Ruch zaakceptowany\n");
 							break;
-						case 2:
-							printf("Twoj ruch\n");
+						default:
+							printf("Message from server: %s\n",gameMessage.content);
 							break;
 					}
 				}
-				gameState == -1;
+				else
+				{
+					printf("Koniec gry! [%s]\n", gameMessage.content);
+				}
+							//printf("Message from server: %s\n",gameMessage.content);
+
+				
 
 	
 			} while(gameState > -1);
@@ -231,6 +256,31 @@ int main(int argc, char * argv[])
 
 
 }
+
+void displayGameboard(GameMatrix *gameboard)
+{
+	semaphoreOperation(gameboard->semID, SEM_P);
+
+	char *pointer = gameboard->board;
+	for(int i=0;i<GAME_MATRIX_CELLS;i++, pointer++)
+	{
+		if(i%5 == 0 && i > 0)
+		{
+			printf("|\n");
+		}
+		printf("|%c", *pointer);
+	}
+	printf("|\n");
+
+	semaphoreOperation(gameboard->semID, SEM_V);
+}
+
+void semaphoreOperation(int semId, int operation) {
+    semaphore.sem_op = operation;
+    semop(semId, &semaphore, 1);
+}
+
+
 
 int initializeChat(int parentPID)
 {

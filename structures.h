@@ -70,7 +70,7 @@
 typedef struct GameMatrix {
     int semID;
     int memID;
-    char matrix[GAME_MATRIX_CELLS];
+    char *board;
 } GameMatrix;
 
 
@@ -166,16 +166,16 @@ ClientInfo getEmptyClientInfo()
 
 int sendPrivateMessage(int id, PrivateMessage *message)
 {
-	printf("message %s, size %d\n", message->content, sizeof(*message) - sizeof(message->type) );
+	//printf("message %s, size %d\n", message->content, sizeof(*message) - sizeof(message->type) );
 	if(msgsnd(id, message, sizeof(*message) - sizeof(message->type), 0) == -1)
 	{
 		 if(errno == EINVAL)
         {
-        	printf(" EINVAL\n");
+        	//printf(" EINVAL\n");
         }
         else
         {
-        	printf("not EINVAL\n");
+        	//printf("not EINVAL\n");
         }
 		if(debug)
 			perror("Failed to send private message!");
@@ -200,7 +200,7 @@ int receivePrivateMessage(int id, PrivateMessage *message, int messageType)
 
 int sendInitialMessage(int id, InitialMessage *message)
 {
-		printf("initial send message type %d\n",message->type);	
+		//printf("initial send message type %d\n",message->type);	
 
 	if(msgsnd(id, message, sizeof(*message) - sizeof(message->type), 0) == -1)
 	{
@@ -216,7 +216,7 @@ int sendInitialMessage(int id, InitialMessage *message)
 
 int receiveInitialMessage(int id, InitialMessage *message, int messageType)
 {
-	printf("Receiving initial message");
+	//printf("Receiving initial message");
 	    int recivedMessage =  msgrcv(id,message, sizeof(*message) - sizeof(message->type), messageType, 0);
         if(recivedMessage == -1)
         {

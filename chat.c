@@ -57,7 +57,7 @@ int main(int argc, char const *argv[]) {
 					int receivedMessage = receiveChatMessage(messageID, &chatMessage, CHAT_SERVER_TO_CLIENT);
 					if(receivedMessage != -1)
 					{
-						printf("%s napisal(a): %s",chatMessage.username, chatMessage.content);
+						printf("\t%s napisal(a): %s",chatMessage.username, chatMessage.content);
 					}
 					else
 					{
