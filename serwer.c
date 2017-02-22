@@ -106,12 +106,13 @@ void findNewClients(Lobby *lobby, Players *players, GameMatrix *gameMatrix)
         }
         else
         {
+                            addNewClient(&message2Rcv, players, &currentNumberOfClients);
+
             //new client hass been found!
             int newClientFork = fork();
             if(newClientFork == 0)
             {
                 //begin new client found section
-                addNewClient(&message2Rcv, players, &currentNumberOfClients);
 
 
                 ClientInfo client;
@@ -140,7 +141,6 @@ void findNewClients(Lobby *lobby, Players *players, GameMatrix *gameMatrix)
                         }
                         printf("message from chat %s, sender: %s\n", receivedChatMessage.content, receivedChatMessage.username);
                         
-                        enterPlayersOperation(players);
                         receivedChatMessage.type = CHAT_SERVER_TO_CLIENT;
 
                         for(int i=0;i<MAX_PLAYER_NUMBER;i++)
@@ -158,7 +158,6 @@ void findNewClients(Lobby *lobby, Players *players, GameMatrix *gameMatrix)
                                 if(msgSND == -1) continue;
                             }
                         }
-                        leavePlayersOperation(players);
     
 
 
@@ -325,14 +324,16 @@ void findNewClients(Lobby *lobby, Players *players, GameMatrix *gameMatrix)
 
 void addNewClient(InitialMessage *newClient, Players *players, int *clientsArrayIndex)
 {
-    enterPlayersOperation(players);
+   // enterPlayersOperation(players);
     ClientInfo newClientInfo;
     newClientInfo.PID = newClient->pid;
     newClientInfo.roomIndex = -1;
     strcpy(newClientInfo.nickname, newClient->username);
     players->clients[(*clientsArrayIndex)++] = newClientInfo;
+    printf("\nTotal number of clients = %d, pid %d", (*clientsArrayIndex), getpid());
     currentNumberOfClients_GLOBAL = *clientsArrayIndex;
-    leavePlayersOperation(players);
+    //leavePlayersOperation(players);
+    displayPlayers(players);
 }
 
 int addClientToRoom(Lobby *lobby, Players *players, int clientIndex, int roomIndex)
@@ -347,7 +348,7 @@ int addClientToRoom(Lobby *lobby, Players *players, int clientIndex, int roomInd
    // enterPlayersOperation(players);
     enterLobbyMemory(lobby);
     printf("Entered critical section\n");
-    sleep(20);
+    //sleep(5);
     int returnValue = -1;
     if(lobby->rooms[roomIndex].state == ROOM_EMPTY)
     {
@@ -366,27 +367,27 @@ int addClientToRoom(Lobby *lobby, Players *players, int clientIndex, int roomInd
     printf("Added player %s to the room %d\n", players->clients[playerIndex].nickname, players->clients[playerIndex].roomIndex);
     }
     leaveLobbyMemory(lobby);
-   // leavePlayersOperation(players);
+    //leavePlayersOperation(players);
     printf("Exited\n");
     return returnValue;
 }
 
 int findClientByPID(int clientPID, Players *clientsArray)
 {
-    enterPlayersOperation(clientsArray);
+   // enterPlayersOperation(clientsArray);
     ClientInfo *client = clientsArray->clients;
     for(int indx = 0 ; indx < MAX_PLAYER_NUMBER; ++indx, client++)
     {
        if(client->PID == clientPID)
        {
             printf("Found at %d\n", indx);
-            leavePlayersOperation(clientsArray);
+            //leavePlayersOperation(clientsArray);
             return indx;
        }
     }
     printf("Not found\n");
 
-    leavePlayersOperation(clientsArray);
+    //leavePlayersOperation(clientsArray);
     return -1;
 } //return index of a client with PID in array of clientInfo structures
 
